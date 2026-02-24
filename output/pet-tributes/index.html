@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pet Memorial Tributes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://meltonmemorials.com/pet-tributes/">
+  
+  <link rel="stylesheet" href="/pet-tributes/assets/mm-tribute.css">
+</head>
+<body>
+
+<main class="memorials-hub">
+  <div class="container text-center">
+
+    <section class="memorials-hero">
+      <div class="hero-header-row">
+        <h1>Pet Memorial Tributes</h1>
+        <div class="tribute-search-wrapper">
+          <input type="text" id="tributeSearch" placeholder="Search tributes..." aria-label="Search tributes">
+        </div>
+      </div>
+
+      <p>A public archive honoring beloved companions and the memories they leave behind.</p>
+
+      <div class="mm-hero-cta">
+        <a href="/submit-a-tribute/" class="mm-btn-primary">Create a Tribute</a>
+      </div>
+    </section>
+
+    <div class="tribute-grid">
+      
+<article class="mm-archive-card">
+  <a class="mm-archive-link" href="/pet-tributes/fritz-rat-2001-2002/">
+    <div class="mm-archive-thumb">
+      <span class="mm-date-badge">Feb 2026</span>
+      <img src="/pet-tributes/fritz-rat-2001-2002/fritz-rat-2001-2002.webp" alt="Fritz memorial tribute">
+    </div>
+    <div class="mm-archive-meta">
+      <h2 class="mm-archive-title">Fritz – Rat</h2>
+      <p class="mm-archive-excerpt">goodbye friendgoodbye friendgoodbye friendgoodbye friendgoodbye friendgoodbye friendgoodbye friendgoodbye friendgoodbye friendgoodbye friend…</p>
+      <p class="mm-archive-years">2001 – 2002</p>
+      <div class="mm-archive-attribution">Mike, GA</div>
+    </div>
+  </a>
+</article>
+
+<article class="mm-archive-card">
+  <a class="mm-archive-link" href="/pet-tributes/testing-the-bear-mutt-2004-2017/">
+    <div class="mm-archive-thumb">
+      <span class="mm-date-badge">Feb 2026</span>
+      <img src="/pet-tributes/testing-the-bear-mutt-2004-2017/testing-the-bear-mutt-2004-2017.webp" alt="Testing the Bear memorial tribute">
+    </div>
+    <div class="mm-archive-meta">
+      <h2 class="mm-archive-title">Testing the Bear – Mutt</h2>
+      <p class="mm-archive-excerpt">Testing the BearTesting the BearTesting the BearTesting the BearTesting the BearTesting the Bear</p>
+      <p class="mm-archive-years">2004 – 2017</p>
+      <div class="mm-archive-attribution">Bob, NM</div>
+    </div>
+  </a>
+</article>
+
+<article class="mm-archive-card">
+  <a class="mm-archive-link" href="/pet-tributes/louis-yorkie/">
+    <div class="mm-archive-thumb">
+      <span class="mm-date-badge">Feb 2026</span>
+      <img src="/pet-tributes/louis-yorkie/louis-yorkie.webp" alt="Louis memorial tribute">
+    </div>
+    <div class="mm-archive-meta">
+      <h2 class="mm-archive-title">Louis – Yorkie</h2>
+      <p class="mm-archive-excerpt">James loved Louis</p>
+      <p class="mm-archive-years">2026</p>
+      <div class="mm-archive-attribution">James, TX</div>
+    </div>
+  </a>
+</article>
+
+    </div>
+
+    
+
+    <section class="mm-bottom-cta">
+      <h3>Would you like to honor your beloved companion?</h3>
+      <div class="mm-cta-buttons">
+        <a href="/submit-a-tribute/" class="mm-btn-primary">Create a Tribute</a>
+        <a href="/pet-tributes/" class="mm-btn-secondary">View All Memorials</a>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const searchInput = document.getElementById("tributeSearch");
+  if (!searchInput) return;
+
+  searchInput.addEventListener("input", function () {
+    const query = this.value.toLowerCase().trim();
+    const cards = document.querySelectorAll(".mm-archive-card");
+
+    cards.forEach(card => {
+      const searchableText = (
+        (card.dataset.name || "") + " " +
+        (card.dataset.breed || "") + " " +
+        (card.dataset.years || "") + " " +
+        (card.dataset.content || "")
+      ).toLowerCase();
+
+      card.style.display = searchableText.includes(query) ? "" : "none";
+    });
+  });
+});
+</script>
+
+</body>
+</html>

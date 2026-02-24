@@ -1,0 +1,35 @@
+[
+  {
+    "slug": "fritz-rat-2001-2002",
+    "pet_name": "Fritz",
+    "breed": "Rat",
+    "years_pretty": "2001 – 2002",
+    "excerpt": "goodbye friendgoodbye friendgoodbye friendgoodbye friendgoodbye friendgoodbye friendgoodbye friendgoodbye friendgoodbye friendgoodbye friend…",
+    "first_name": "Mike",
+    "state": "GA",
+    "published_iso": "2026-02-23",
+    "image_filename": "fritz-rat-2001-2002.webp"
+  },
+  {
+    "slug": "testing-the-bear-mutt-2004-2017",
+    "pet_name": "Testing the Bear",
+    "breed": "Mutt",
+    "years_pretty": "2004 – 2017",
+    "excerpt": "Testing the BearTesting the BearTesting the BearTesting the BearTesting the BearTesting the Bear",
+    "first_name": "Bob",
+    "state": "NM",
+    "published_iso": "2026-02-23",
+    "image_filename": "testing-the-bear-mutt-2004-2017.webp"
+  },
+  {
+    "slug": "louis-yorkie",
+    "pet_name": "Louis",
+    "breed": "Yorkie",
+    "years_pretty": "2026",
+    "excerpt": "James loved Louis",
+    "first_name": "James",
+    "state": "TX",
+    "published_iso": "2026-02-23",
+    "image_filename": "louis-yorkie.webp"
+  }
+]
