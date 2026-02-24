@@ -1,0 +1,324 @@
+/* ==========================================
+   MELTON MEMORIALS - HEADER & FOOTER STYLES
+   (Extracted from Root styles.css)
+   ========================================== */
+
+/* GLOBAL RESET FOR CONSISTENCY */
+/* BASE RESET (moved from old styles.css) */
+
+
+
+
+
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Libre Baskerville', serif;
+    background: #f8f6f3;
+    color: #222;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+html,
+body {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* HEADER */
+.site-header {
+    background: linear-gradient(to right, #1a1a1a, #222);
+    padding: 20px 0;
+    position: relative;
+    z-index: 100;
+    /* Ensure it stays above content but below overlays if any */
+    width: 100%;
+    margin: 0;
+}
+
+.nav-container {
+    width: 92%;
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+}
+
+.nav-list,
+.nav-list ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.nav-list {
+    display: flex;
+    gap: 40px;
+    align-items: center;
+}
+
+.nav-list a {
+    color: rgba(255, 255, 255, 0.85);
+    text-decoration: none;
+    letter-spacing: 2px;
+    font-size: 14px;
+    transition: opacity 0.2s ease;
+}
+
+.nav-list a:hover {
+    opacity: 0.7;
+}
+
+/* BRAND STYLES */
+.brand {
+    margin-left: -4px;
+    text-align: center;
+}
+
+.brand a {
+    text-decoration: none;
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.brand-main {
+    font-family: 'Libre Baskerville', serif;
+    font-weight: 700;
+    font-size: 34px;
+    letter-spacing: 1.5px;
+    line-height: 1.05;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.brand-top,
+.brand-bottom {
+    display: block;
+}
+
+.brand-tagline {
+    font-size: 11px;
+    letter-spacing: 3.5px;
+    text-transform: uppercase;
+    margin-top: 6px;
+    opacity: 0.85;
+    text-align: center;
+}
+
+/* FOOTER */
+.site-footer {
+    background: linear-gradient(to bottom, #0a0a0a 0%, #1a1a1a 100%);
+    color: #e0e0e0;
+    padding: 60px 0 0;
+    border-top: 1px solid #2a2a2a;
+    position: relative;
+    z-index: 10;
+}
+
+.footer-content {
+    padding-bottom: 40px;
+}
+
+.footer-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    /* Adjusted for simplified version */
+    gap: 50px;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 92%;
+}
+
+.footer-brand {
+    max-width: 400px;
+}
+
+.footer-logo .brand-main {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 8px;
+}
+
+.footer-logo .brand-top,
+.footer-logo .brand-bottom {
+    font-family: 'Libre Baskerville', serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #ffffff;
+    line-height: 1;
+}
+
+.footer-logo .brand-tagline {
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    color: #999;
+    margin-bottom: 20px;
+}
+
+.footer-description {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: #b0b0b0;
+    margin: 0 0 15px 0;
+}
+
+.footer-rating {
+    font-size: 0.95rem;
+    color: #ffd700;
+    margin-top: 15px;
+}
+
+.footer-rating span {
+    color: #b0b0b0;
+    margin-left: 8px;
+}
+
+.footer-column h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #ffffff;
+    margin: 0 0 20px 0;
+    letter-spacing: 0.5px;
+}
+
+.footer-column a {
+    display: block;
+    color: #b0b0b0;
+    text-decoration: none;
+    margin-bottom: 12px;
+    font-size: 0.9rem;
+    transition: color 0.2s ease;
+}
+
+.footer-column a:hover {
+    color: #ffffff;
+}
+
+.footer-contact-info {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: #b0b0b0;
+    margin: 0;
+}
+
+.footer-contact-info strong {
+    color: #ffffff;
+}
+
+.footer-email,
+.footer-phone {
+    color: #b0b0b0 !important;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.footer-email:hover,
+.footer-phone:hover {
+    color: #ffffff !important;
+}
+
+.footer-bottom {
+    background: #0a0a0a;
+    border-top: 1px solid #2a2a2a;
+    padding: 25px 0;
+}
+
+.footer-bottom-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 92%;
+}
+
+.footer-bottom-content p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.footer-legal a {
+    color: #b0b0b0;
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: color 0.15s ease;
+}
+
+.footer-legal a:hover {
+    color: #ffffff;
+}
+
+.footer-legal span {
+    margin: 0 10px;
+    color: #444;
+}
+
+/* RESPONSIVE */
+/* Hide mobile toggle on desktop */
+.mobile-nav-toggle {
+    display: none;
+}
+
+@media (max-width: 900px) {
+    .footer-grid {
+        grid-template-columns: 1fr;
+        gap: 40px;
+    }
+
+    .nav-list {
+        gap: 20px;
+        display: none;
+        /* Hide nav until toggle behavior is built */
+    }
+
+    /* Show hamburger on mobile */
+    .mobile-nav-toggle {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        background: none;
+        border: none;
+        cursor: pointer;
+    }
+
+    .hamburger-bar {
+        width: 22px;
+        height: 2px;
+        background: #ffffff;
+        display: block;
+    }
+
+    /* Reduce logo size for mobile */
+    .brand-main {
+        font-size: 22px;
+    }
+
+    .brand-tagline {
+        font-size: 9px;
+        letter-spacing: 2px;
+    }
+}

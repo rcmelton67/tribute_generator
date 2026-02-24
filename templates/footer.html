@@ -1,0 +1,81 @@
+<footer class="site-footer">
+    <div class="container footer-content">
+        <div class="footer-grid">
+            <div class="footer-brand">
+                <div class="footer-logo">
+                    <div class="brand-main">
+                        <span class="brand-top">MELTON</span>
+                        <span class="brand-bottom">MEMORIALS</span>
+                    </div>
+                    <div class="brand-tagline">Love • Honor • Remembrance</div>
+                </div>
+                <p class="footer-description">
+                    Handcrafted pet memorial stones, including granite, cast stone, and natural river rock designs,
+                    crafted for lasting outdoor placement.
+                    Each memorial stone is deeply engraved with care in Alma, Arkansas —
+                    creating a permanent tribute for dogs, cats, and beloved companions.
+                </p>
+                <div class="footer-rating">★★★★★ <span>Thousands of Five-Star Reviews from Pet Memorial Families</span>
+                </div>
+            </div>
+
+            <div class="footer-column">
+                <h3>Shop</h3>
+                <a href="{{PREFIX}}pages/products/granite-pet-memorial-stone/index.html">Shop All Memorials</a>
+            </div>
+
+            <div class="footer-column">
+                <h3>Tributes</h3>
+                <a href="{{PREFIX}}pages/memorials/index.html">Pet Memorial Tributes</a>
+                <a href="https://meltonmemorials.com/pet-tributes/submit/">Submit a Tribute</a>
+            </div>
+
+            <div class="footer-column">
+                <h3>Contact</h3>
+                <p class="footer-contact-info">
+                    <strong>Melton Memorials — Alma, Arkansas</strong><br><br>
+                    <a href="mailto:rodney@meltonmemorials.com" class="footer-email">rodney@meltonmemorials.com</a><br>
+                    <a href="tel:+14794300716" class="footer-phone">(479) 430-0716</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer-bottom">
+        <div class="container">
+            <div class="footer-bottom-content">
+                <p>© 2026 Melton Memorials. All rights reserved.</p>
+                <div class="footer-legal">
+                    <a href="#">Privacy Policy</a>
+                    <span>•</span>
+                    <a href="#">Terms of Service</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const mobileToggle = document.querySelector('.mobile-nav-toggle');
+            const mainNav = document.querySelector('.main-nav');
+
+            if (mobileToggle && mainNav) {
+                mobileToggle.addEventListener('click', function () {
+                    mainNav.classList.toggle('mobile-active');
+                    mobileToggle.classList.toggle('active');
+                    document.body.classList.toggle('menu-open');
+                });
+            }
+
+            document.addEventListener('click', function (e) {
+                // Close mobile menu when clicking outside
+                if (mainNav && mainNav.classList.contains('mobile-active') &&
+                    !e.target.closest('.main-nav') && !e.target.closest('.mobile-nav-toggle')) {
+                    mainNav.classList.remove('mobile-active');
+                    mobileToggle.classList.remove('active');
+                    document.body.classList.toggle('menu-open');
+                }
+            });
+        });
+    </script>
+</footer>

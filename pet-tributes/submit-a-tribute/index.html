@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submit a Tribute | Melton Memorials</title>
+    <meta name="robots" content="noindex, follow">
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../assets/css/styles.css?v=hardreset3">
+    <link rel="stylesheet" href="../../assets/css/styles.css?v=hardreset3">
+    <link rel="stylesheet" href="../../assets/css/memorial-theme.css">
+</head>
+
+<body>
+    <header class="site-header">
+<div class="nav-container">
+        <div class="logo">
+            <div class="brand">
+                <a href="../../pages/home/index.html">
+                    <div class="brand-main">
+                        <span class="brand-top">MELTON</span>
+                        <span class="brand-bottom">MEMORIALS</span>
+                    </div>
+                    <div class="brand-tagline">
+                        Love • Honor • Remembrance
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <button class="mobile-nav-toggle" aria-label="Toggle navigation">
+            <span class="hamburger-bar"></span>
+            <span class="hamburger-bar"></span>
+            <span class="hamburger-bar"></span>
+        </button>
+
+        <nav class="main-nav">
+            <ul class="nav-list">
+                <li><a href="../../pages/products/granite-pet-memorial-stone/index.html">Memorials</a></li>
+                <li><a href="../../pages/memorials/index.html">Tributes</a></li>
+            </ul>
+        </nav>
+    </div>
+</header>
+    <main style="padding-top: 60px; padding-bottom: 80px;">
+        <div class="container" style="max-width: 800px;">
+            <h1
+                style="text-align: center; font-family: 'Libre Baskerville', serif; font-size: 2.5rem; margin-bottom: 1.5rem;">
+                Honor Your Pet’s Memory</h1>
+
+            <div style="text-align: center; margin-bottom: 40px; font-size: 1.1rem; line-height: 1.6;">
+                <p>If you would like to share your pet’s tribute in our memorial gallery, we would be honored.<br>
+                    After approval, your tribute will become part of our permanent remembrance collection.</p>
+            </div>
+
+            <div class="form-card"
+                style="background: #fff; padding: 40px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid #eee;">
+                <form id="tributeForm" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label for="petName">Pet Name <span class="required">*</span></label>
+                        <input type="text" id="petName" name="petName" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group half">
+                            <label for="petType">Pet Type <span class="required">*</span></label>
+                            <select id="petType" name="petType" required>
+                                <option value="" disabled selected>Select...</option>
+                                <option value="Dog">Dog</option>
+                                <option value="Cat">Cat</option>
+                                <option value="Horse">Horse</option>
+                                <option value="Bird">Bird</option>
+                                <option value="Reptile">Reptile</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group half">
+                            <label for="breed">Breed</label>
+                            <input type="text" id="breed" name="breed" placeholder="e.g. Labrador">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="yearsTogether">Years Together</label>
+                        <input type="text" id="yearsTogether" name="yearsTogether" placeholder="e.g. 2010 - 2024">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="tributeStory">Tribute Message <span class="required">*</span></label>
+                        <textarea id="tributeStory" name="tributeStory" rows="6" required
+                            placeholder="Share your favorite memory..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="petPhoto">Upload Pet Photo (Optional)</label>
+                        <input type="file" id="petPhoto" name="petPhoto" accept="image/*">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="memorialImg">Add Memorial Image (Optional)</label>
+                        <input type="file" id="memorialImg" name="memorialImg" accept="image/*">
+                        <small style="color: #666; display: block; margin-top: 5px;">Haven't received your memorial yet?
+                            No worries! You can always come back and add this image later once it arrives.</small>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group half">
+                            <label for="firstName">First Name <span class="required">*</span></label>
+                            <input type="text" id="firstName" name="firstName" required>
+                        </div>
+                        <div class="form-group half">
+                            <label for="state">State <span class="required">*</span></label>
+                            <input type="text" id="state" name="state" required placeholder="e.g. Arkansas">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Email Address <span class="required">*</span></label>
+                        <input type="email" id="email" name="email" required>
+                        <small style="color: #666; display: block; margin-top: 5px;">Your email is for internal use only
+                            and will not be published.</small>
+                    </div>
+
+                    <div style="text-align: center; margin-top: 30px;">
+                        <button type="submit" class="btn btn-primary"
+                            style="padding: 14px 40px; font-size: 1.1rem; cursor: pointer;">Submit Tribute</button>
+                        <p style="margin-top: 15px; font-size: 0.9rem; color: #666;">All tributes are reviewed before
+                            publication.</p>
+                    </div>
+                </form>
+                <div id="submitMessage"
+                    style="display:none; text-align: center; margin-top: 20px; font-weight: bold; color: green;"></div>
+            </div>
+        </div>
+    </main>
+
+    </main>
+
+    <style>
+        body {
+            background-color: #f0ebe6;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.12'/%3E%3C/svg%3E");
+            margin: 0;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .required {
+            color: #c00;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        input[type="file"] {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            border: 1px dashed #ccc;
+            border-radius: 4px;
+            background: #f9f9f9;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 20px;
+        }
+
+        .half {
+            flex: 1;
+        }
+
+        .checkbox-group {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .checkbox-group input {
+            margin-top: 5px;
+        }
+
+        .checkbox-group label {
+            font-weight: 400;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .btn-primary {
+            background: #2c3e50;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: background 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background: #1a252f;
+        }
+
+        @media (max-width: 600px) {
+            .form-row {
+                flex-direction: column;
+                gap: 0;
+            }
+
+            .container {
+                padding: 0 15px;
+            }
+        }
+    </style>
+
+    <script>
+        document.getElementById('tributeForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerText;
+
+            submitBtn.innerText = 'Submitting...';
+            submitBtn.disabled = true;
+
+            try {
+                // Determine if we are submitting to a real backend or the python script
+                // For this demo, we assume the python server.py handles /api/submit-tribute
+
+                // Convert FormData to JSON object for simple handling in our python script
+                // Note: File uploads won't work perfectly with JSON conversion in this simple script 
+                // but we will simulate the data structure.
+
+                const object = {};
+                formData.forEach((value, key) => {
+                    // Primitive handling of files for JSON
+                    if (value instanceof File) {
+                        object[key] = value.name ? "File: " + value.name : "";
+                    } else {
+                        object[key] = value;
+                    }
+                });
+
+                // Add default status
+                object['publish_status'] = 'pending';
+                // Add marketing and internal flags
+                object['marketing_status'] = 'quiet';
+                object['internal_flags'] = ['tribute_donor', 'future_followup'];
+
+                const response = await fetch('/api/submit-tribute', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(object)
+                });
+
+                if (response.ok) {
+                    document.getElementById('tributeForm').reset();
+                    document.getElementById('submitMessage').innerText = 'Thank you! Your tribute has been submitted for review.';
+                    document.getElementById('submitMessage').style.display = 'block';
+                    document.getElementById('tributeForm').style.display = 'none';
+                } else {
+                    alert('There was an error submitting your tribute. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('There was a network error. Please ensure the server handles requests.');
+            } finally {
+                submitBtn.innerText = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+
+    <footer class="site-footer">
+<div class="container footer-content">
+        <div class="footer-grid">
+            <div class="footer-brand">
+                <div class="footer-logo">
+                    <div class="brand-main">
+                        <span class="brand-top">MELTON</span>
+                        <span class="brand-bottom">MEMORIALS</span>
+                    </div>
+                    <div class="brand-tagline">Love • Honor • Remembrance</div>
+                </div>
+                <p class="footer-description">
+                    Handcrafted pet memorial stones, including granite, cast stone, and natural river rock designs,
+                    crafted for lasting outdoor placement.
+                    Each memorial stone is deeply engraved with care in Alma, Arkansas —
+                    creating a permanent tribute for dogs, cats, and beloved companions.
+                </p>
+                <div class="footer-rating">★★★★★ <span>Thousands of Five-Star Reviews from Pet Memorial Families</span>
+                </div>
+            </div>
+
+            <div class="footer-column">
+                <h3>Shop</h3>
+                <a href="../../pages/products/granite-pet-memorial-stone/index.html">Shop All Memorials</a>
+            </div>
+
+            <div class="footer-column">
+                <h3>Tributes</h3>
+                <a href="../../pages/memorials/index.html">Pet Memorial Tributes</a>
+                <a href="../../pet-tributes/submit-a-tribute/index.html">Submit a Tribute</a>
+            </div>
+
+            <div class="footer-column">
+                <h3>Contact</h3>
+                <p class="footer-contact-info">
+                    <strong>Melton Memorials — Alma, Arkansas</strong><br><br>
+                    <a href="mailto:rodney@meltonmemorials.com" class="footer-email">rodney@meltonmemorials.com</a><br>
+                    <a href="tel:+14794300716" class="footer-phone">(479) 430-0716</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer-bottom">
+        <div class="container">
+            <div class="footer-bottom-content">
+                <p>© 2026 Melton Memorials. All rights reserved.</p>
+                <div class="footer-legal">
+                    <a href="#">Privacy Policy</a>
+                    <span>•</span>
+                    <a href="#">Terms of Service</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const mobileToggle = document.querySelector('.mobile-nav-toggle');
+            const mainNav = document.querySelector('.main-nav');
+
+            if (mobileToggle && mainNav) {
+                mobileToggle.addEventListener('click', function () {
+                    mainNav.classList.toggle('mobile-active');
+                    mobileToggle.classList.toggle('active');
+                    document.body.classList.toggle('menu-open');
+                });
+            }
+
+            document.addEventListener('click', function (e) {
+                // Close mobile menu when clicking outside
+                if (mainNav && mainNav.classList.contains('mobile-active') &&
+                    !e.target.closest('.main-nav') && !e.target.closest('.mobile-nav-toggle')) {
+                    mainNav.classList.remove('mobile-active');
+                    mobileToggle.classList.remove('active');
+                    document.body.classList.toggle('menu-open');
+                }
+            });
+        });
+    </script>
+</footer>
+</body>
+
+</html>

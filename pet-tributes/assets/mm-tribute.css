@@ -1,0 +1,344 @@
+/* ==========================================
+   WARM TEXTURED PAGE BACKGROUND
+   ========================================== */
+
+body {
+    background-color: #f0ebe6;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.12'/%3E%3C/svg%3E");
+}
+
+/* ==========================================
+   HERO CENTERING
+   ========================================== */
+
+.memorials-hero {
+    text-align: center;
+    max-width: 800px;
+    margin: 0 auto 2.5rem;
+}
+
+.hero-header-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+}
+
+/* ==========================================
+   TRIBUTE SEARCH (RELOCATED TO TOP RIGHT)
+   ========================================== */
+
+.memorials-hub .container {
+    position: relative;
+}
+
+.tribute-search-wrapper {
+    position: absolute;
+    top: 60px;
+    /* Lowered to ensure full visibility below header */
+    right: 5%;
+    /* Adjusted from 0 to bring it slightly left */
+    width: 280px;
+    z-index: 10;
+}
+
+#tributeSearch {
+    width: 100%;
+    padding: 12px 40px 12px 18px;
+    border-radius: 30px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: #ffffff;
+    font-size: 0.95rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+}
+
+#tributeSearch:focus {
+    outline: none;
+    border-color: #2e2a26;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+.search-clear-btn {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 20px;
+    color: #999;
+    font-family: Arial, sans-serif;
+    line-height: 1;
+    display: none;
+    /* Hidden by default, shown via JS */
+    user-select: none;
+    transition: color 0.2s;
+}
+
+.search-clear-btn:hover {
+    color: #333;
+}
+
+/* Responsive adjustment for search */
+@media (max-width: 900px) {
+    .tribute-search-wrapper {
+        position: static;
+        width: 100%;
+        max-width: 320px;
+        margin: 20px auto;
+    }
+
+    .hero-header-row {
+        margin-top: 20px;
+    }
+}
+
+.memorials-hero h1 {
+    font-size: 2.6rem;
+    margin-bottom: 10px;
+}
+
+.memorials-hero p {
+    font-size: 1.05rem;
+    color: #555;
+}
+
+/* ==========================================
+   ARCHIVE GRID (NARROWER CARDS)
+   ========================================== */
+
+.tribute-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(260px, 320px));
+    justify-content: center;
+    gap: 40px;
+    margin-top: 3rem;
+}
+
+/* Responsive */
+
+@media (max-width: 1100px) {
+    .tribute-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 680px) {
+    .tribute-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ==========================================
+   ARCHIVE CARD
+   ========================================== */
+
+.mm-archive-card {
+    background: #faf8f5;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.mm-archive-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 28px 60px rgba(0, 0, 0, 0.12);
+}
+
+/* Make entire card clickable cleanly */
+
+.mm-archive-link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+}
+
+/* ==========================================
+   IMAGE
+   ========================================== */
+
+.mm-archive-thumb {
+    overflow: hidden;
+}
+
+.mm-archive-thumb img {
+    width: 100%;
+    height: 340px;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.4s ease;
+}
+
+.mm-archive-card:hover .mm-archive-thumb img {
+    transform: scale(1.06);
+}
+
+/* ==========================================
+   CONTENT
+   ========================================== */
+
+.mm-archive-meta {
+    padding: 22px;
+}
+
+.mm-archive-title {
+    font-size: 1.3rem;
+    margin: 0 0 10px;
+    line-height: 1.2;
+}
+
+.mm-archive-excerpt {
+    font-size: 0.95rem;
+    color: #555;
+    margin-bottom: 14px;
+    line-height: 1.5;
+}
+
+.mm-archive-years {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #444;
+}
+
+/* ==========================================
+   HERO CTA
+   ========================================== */
+
+.mm-hero-cta {
+    margin-top: 22px;
+}
+
+/* ==========================================
+   BUTTONS
+   ========================================== */
+
+.mm-btn-primary,
+.mm-btn-secondary {
+    display: inline-block;
+    padding: 12px 26px;
+    border-radius: 30px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.25s ease;
+}
+
+/* Primary */
+
+.mm-btn-primary {
+    background: #2e2a26;
+    color: #ffffff;
+}
+
+.mm-btn-primary:hover {
+    background: #000;
+    transform: translateY(-2px);
+}
+
+/* Secondary */
+
+.mm-btn-secondary {
+    background: transparent;
+    border: 1px solid #2e2a26;
+    color: #2e2a26;
+}
+
+.mm-btn-secondary:hover {
+    background: #2e2a26;
+    color: #ffffff;
+    transform: translateY(-2px);
+}
+
+/* ==========================================
+   BOTTOM CTA SECTION
+   ========================================== */
+
+.mm-bottom-cta {
+    text-align: center;
+    margin-top: 80px;
+    padding: 60px 20px;
+}
+
+.mm-bottom-cta h3 {
+    margin-bottom: 28px;
+    font-size: 1.5rem;
+}
+
+.mm-cta-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+/* ==========================================
+   DATE BADGE (Upper Right Overlay)
+   ========================================== */
+
+.mm-archive-thumb {
+    position: relative;
+}
+
+.mm-date-badge {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(4px);
+    font-size: 0.7rem;
+    padding: 6px 10px;
+    border-radius: 20px;
+    color: #555;
+    letter-spacing: 0.6px;
+    font-weight: 500;
+}
+
+/* ==========================================
+   CARD ATTRIBUTION (Lower Right)
+   ========================================== */
+
+.mm-archive-meta {
+    position: relative;
+}
+
+.mm-archive-attribution {
+    margin-top: 18px;
+    padding-top: 14px;
+    font-size: 0.8rem;
+    color: #8c8c8c;
+    text-align: right;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* ==========================================
+   PAGINATION
+   ========================================== */
+
+.mm-pagination {
+    margin-top: 60px;
+    text-align: center;
+}
+
+.mm-pagination a {
+    display: inline-block;
+    margin: 0 6px;
+    padding: 8px 14px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 14px;
+    background: #f1f1f1;
+    color: #333;
+    transition: all .2s ease;
+}
+
+.mm-pagination a:hover {
+    background: #2c3e50;
+    color: #fff;
+}
+
+.mm-pagination .mm-page-active {
+    background: #2c3e50;
+    color: #fff;
+}

@@ -19,8 +19,7 @@ SITE_DOMAIN = "https://meltonmemorials.com"
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 TEMPLATES_DIR = os.path.join(PROJECT_ROOT, "templates")
-OUTPUT_ROOT = os.path.join(PROJECT_ROOT, "output")
-TRIBUTES_DIR = os.path.join(OUTPUT_ROOT, "pet-tributes")
+TRIBUTES_DIR = os.path.join(PROJECT_ROOT, "pet-tributes")
 
 ARCHIVE_INDEX = os.path.join(TRIBUTES_DIR, "index.html")
 ARCHIVE_DATA = os.path.join(TRIBUTES_DIR, "data.json")
@@ -230,101 +229,51 @@ def build_pagination(current: int, total: int) -> str:
 
 
 def build_archive_full_html(cards_html: str, current_page: int, total_pages: int) -> str:
+
     title = "Pet Memorial Tributes" if current_page == 1 else f"Pet Memorial Tributes — Page {current_page}"
     canonical = SITE_DOMAIN + page_url(current_page)
-    prev_link = SITE_DOMAIN + page_url(current_page - 1) if current_page > 1 else ""
-    next_link = SITE_DOMAIN + page_url(current_page + 1) if current_page < total_pages else ""
 
-    rel_links = []
-    if prev_link:
-        rel_links.append(f'<link rel="prev" href="{prev_link}">')
-    if next_link:
-        rel_links.append(f'<link rel="next" href="{next_link}">')
+    # Load base + archive template
+    base = load_template("base.html")
+    archive_template = load_template("archive.html")
 
-    return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
+    # Build head meta
+    head_meta = f"""
   <title>{escape_html(title)}</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="{canonical}">
-  {"".join(rel_links)}
-  <link rel="stylesheet" href="{css_href_for_page(current_page)}">
-</head>
-<body>
+""".strip()
 
-<main class="memorials-hub">
-  <div class="container text-center">
+    # Inject cards + pagination into archive template
+    pagination_html = build_pagination(current_page, total_pages)
 
-    <section class="memorials-hero">
-      <div class="hero-header-row">
-        <h1>Pet Memorial Tributes</h1>
-        <div class="tribute-search-wrapper">
-          <input type="text" id="tributeSearch" placeholder="Search tributes..." aria-label="Search tributes">
-        </div>
-      </div>
+    content = archive_template.replace("{{CARDS}}", cards_html)
+    content = content.replace("{{PAGINATION}}", pagination_html)
 
-      <p>A public archive honoring beloved companions and the memories they leave behind.</p>
+    # Load header + footer
+    header_template = load_template("header.html")
+    header_html = header_template.replace("{{HEADER_CLASSES}}", "site-header")
 
-      <div class="mm-hero-cta">
-        <a href="/submit-a-tribute/" class="mm-btn-primary">Create a Tribute</a>
-      </div>
-    </section>
+    footer_html = load_template("footer.html")
 
-    <div class="tribute-grid">
-      {cards_html}
-    </div>
+    # Assemble final
+    final_html = base.replace("{{HEAD_META}}", head_meta)
+    final_html = final_html.replace("{{HEADER}}", header_html)
+    final_html = final_html.replace("{{CONTENT}}", content)
+    final_html = final_html.replace("{{FOOTER}}", footer_html)
 
-    {build_pagination(current_page, total_pages)}
-
-    <section class="mm-bottom-cta">
-      <h3>Would you like to honor your beloved companion?</h3>
-      <div class="mm-cta-buttons">
-        <a href="/submit-a-tribute/" class="mm-btn-primary">Create a Tribute</a>
-        <a href="/pet-tributes/" class="mm-btn-secondary">View All Memorials</a>
-      </div>
-    </section>
-
-  </div>
-</main>
-
-<script>
-document.addEventListener("DOMContentLoaded", function () {{
-  const searchInput = document.getElementById("tributeSearch");
-  if (!searchInput) return;
-
-  searchInput.addEventListener("input", function () {{
-    const query = this.value.toLowerCase().trim();
-    const cards = document.querySelectorAll(".mm-archive-card");
-
-    cards.forEach(card => {{
-      const searchableText = (
-        (card.dataset.name || "") + " " +
-        (card.dataset.breed || "") + " " +
-        (card.dataset.years || "") + " " +
-        (card.dataset.content || "")
-      ).toLowerCase();
-
-      card.style.display = searchableText.includes(query) ? "" : "none";
-    }});
-  }});
-}});
-</script>
-
-</body>
-</html>"""
-
+    return final_html
 
 def rebuild_archive_pages(entries):
     from math import ceil
-
-    CARDS_PER_PAGE = 15
 
     # Sort newest first
     entries = sorted(entries, key=lambda x: x.get("published_iso", ""), reverse=True)
 
     total_pages = ceil(len(entries) / CARDS_PER_PAGE)
+
+    if total_pages == 0:
+        total_pages = 1
 
     for page_num in range(1, total_pages + 1):
 
@@ -333,58 +282,13 @@ def rebuild_archive_pages(entries):
         page_entries = entries[start:end]
 
         cards_html = ""
-
         for entry in page_entries:
-            publish_label = ""
-            if entry.get("published_iso"):
-                from datetime import datetime
-                dt = datetime.strptime(entry["published_iso"], "%Y-%m-%d")
-                publish_label = dt.strftime("%b %Y")
+            cards_html += build_card_html(entry)
 
-            attribution = ""
-            if entry.get("first_name") or entry.get("state"):
-                parts = [p for p in [entry.get("first_name"), entry.get("state")] if p]
-                attribution = f'<div class="mm-archive-attribution">{", ".join(parts)}</div>'
+        # Build full archive page via template system
+        final_html = build_archive_full_html(cards_html, page_num, total_pages)
 
-            cards_html += f"""
-<article class="mm-archive-card">
-  <a class="mm-archive-link" href="/pet-tributes/{entry["slug"]}/">
-    <div class="mm-archive-thumb">
-      <span class="mm-date-badge">{publish_label}</span>
-      <img src="/pet-tributes/{entry["slug"]}/{entry["image_filename"]}" alt="{entry["pet_name"]} memorial tribute">
-    </div>
-    <div class="mm-archive-meta">
-      <h2 class="mm-archive-title">{entry["pet_name"]} – {entry["breed"]}</h2>
-      <p class="mm-archive-excerpt">{entry["excerpt"]}</p>
-      <p class="mm-archive-years">{entry["years_pretty"]}</p>
-      {attribution}
-    </div>
-  </a>
-</article>
-"""
-
-        # Build pagination
-        pagination_html = '<div class="mm-pagination">'
-
-        if page_num > 1:
-            prev_link = "index.html" if page_num - 1 == 1 else f"page-{page_num-1}/index.html"
-            pagination_html += f'<a href="../{prev_link}">←</a>'
-
-        for p in range(1, total_pages + 1):
-            if p == page_num:
-                pagination_html += f'<a class="active">{p}</a>'
-            else:
-                link = "index.html" if p == 1 else f"page-{p}/index.html"
-                prefix = "" if page_num == 1 else "../"
-                pagination_html += f'<a href="{prefix}{link}">{p}</a>'
-
-        if page_num < total_pages:
-            next_link = f"page-{page_num+1}/index.html"
-            pagination_html += f'<a href="{next_link}">→</a>'
-
-        pagination_html += "</div>"
-
-        # Write page
+        # Determine path
         if page_num == 1:
             page_path = os.path.join(TRIBUTES_DIR, "index.html")
         else:
@@ -393,7 +297,8 @@ def rebuild_archive_pages(entries):
             page_path = os.path.join(page_folder, "index.html")
 
         with open(page_path, "w", encoding="utf-8") as f:
-            f.write(build_archive_full_html(cards_html, page_num, total_pages))
+            f.write(final_html)
+
 
 
 def migrate_existing_folders_to_json():
@@ -475,7 +380,8 @@ def build_tribute_html(
     publish_date_iso: str,
     tribute_message_html: str,
 ) -> str:
-    # Title / subtitle logic
+
+    # ----- Title / subtitle logic -----
     breed_clean = (breed or "").strip()
     if breed_clean:
         title = f"{pet_name} – {breed_clean} Memorial Tribute"
@@ -486,16 +392,21 @@ def build_tribute_html(
         subtitle = "Memorial Tribute"
         og_desc = excerpt or f"Read the memorial tribute honoring {pet_name}."
 
-    # Keep meta description under ~160-ish when possible
     meta_desc = excerpt if excerpt else f"A memorial tribute honoring {pet_name}."
     if len(meta_desc) > 165:
         meta_desc = meta_desc[:162].rstrip() + "…"
 
     submitter_parts = [p for p in [first_name.strip(), state.strip()] if p]
     submitter_line = ", ".join(submitter_parts)
-    submitter_html = f'<p class="mm-tribute-origin">Shared by {escape_html(submitter_line)}</p>' if submitter_line else ""
+    submitter_html = (
+        f'<p class="mm-tribute-origin">Shared by {escape_html(submitter_line)}</p>'
+        if submitter_line else ""
+    )
 
+    # ----- Load base template -----
     base = load_template("base.html")
+
+    # ----- Build head meta -----
     head_meta = f"""
   <title>{escape_html(title)}</title>
   <meta name="description" content="{escape_html(meta_desc)}">
@@ -517,11 +428,11 @@ def build_tribute_html(
   <meta name="twitter:title" content="{escape_html(title)}">
   <meta name="twitter:description" content="{escape_html(og_desc)}">
   <meta name="twitter:image" content="{og_image_abs}">
-  <link rel="stylesheet" href="{TRIBUTE_CSS_HREF}">
 """.strip()
+
+    # ----- Load tribute content template -----
     content = load_template("tribute_content.html")
 
-    # Inject tribute values
     content = content.replace("{{PET_NAME}}", escape_html(pet_name))
     content = content.replace("{{SUBTITLE}}", escape_html(subtitle))
     content = content.replace("{{IMAGE_SRC}}", relative_filename_from_url(og_image_abs))
@@ -529,112 +440,20 @@ def build_tribute_html(
     content = content.replace("{{YEARS}}", escape_html(years_pretty))
     content = content.replace("{{SUBMITTER_LINE}}", submitter_html)
 
-    # Placeholder header/footer (future use)
-    header_html = ""
-    footer_html = ""
+    # ----- Load header + footer -----
+    header_template = load_template("header.html")
+    header_html = header_template.replace("{{HEADER_CLASSES}}", "site-header")
 
-    # Assemble final page
+    footer_html = load_template("footer.html")
+
+    # ----- Assemble final page -----
     final_html = base.replace("{{HEAD_META}}", head_meta)
     final_html = final_html.replace("{{HEADER}}", header_html)
-    final_html = final_html.replace("{{FOOTER}}", footer_html)
     final_html = final_html.replace("{{CONTENT}}", content)
+    final_html = final_html.replace("{{FOOTER}}", footer_html)
 
     return final_html
-    content = f"""
-  <div class="mm-tribute-system">
-    <div class="mm-tribute-wrapper">
-      <p class="mm-memorial-line">In Loving Memory of</p>
 
-      <h1 class="mm-tribute-name">{escape_html(pet_name)}</h1>
-
-      <p class="mm-tribute-subtitle">{escape_html(subtitle)}</p>
-
-      <div class="mm-tribute-divider"></div>
-
-      <img src="{escape_html(relative_filename_from_url(og_image_abs))}"
-           alt="{escape_html(pet_name)} memorial tribute photo"
-           style="max-width:100%; height:auto; display:block; margin: 1rem 0; border-radius: 10px;">
-
-      <div class="mm-tribute-body">
-        <div class="mm-tribute-message">
-          {tribute_message_html}
-        </div>
-      </div>
-
-      <p class="mm-years">{escape_html(years_pretty)}</p>
-      {submitter_html}
-
-      <div class="mm-tribute-share" aria-label="Share this tribute">
-        <p class="mm-share-label">Share this memory</p>
-        <div class="mm-share-icons">
-          <a class="mm-share-icon"
-             href="https://www.facebook.com/sharer/sharer.php?u={page_url}"
-             target="_blank" rel="noopener" aria-label="Share on Facebook">
-            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-              <path d="M22 12a10 10 0 1 0-11.6 9.9v-7H7.9v-2.9h2.5V9.8c0-2.5 1.5-3.9 3.7-3.9 1.1 0 2.2.2 2.2.2v2.4h-1.2c-1.2 0-1.6.8-1.6 1.5v1.8h2.8l-.4 2.9h-2.4v7A10 10 0 0 0 22 12z"></path>
-            </svg>
-          </a>
-
-          <a class="mm-share-icon"
-             href="https://pinterest.com/pin/create/button/?url={page_url}&media={og_image_abs}&description={escape_url(excerpt or '')}"
-             target="_blank" rel="noopener" aria-label="Share on Pinterest">
-            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-              <path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 5.079 3.158 9.417 7.618 11.162-.105-.949-.199-2.403.041-3.439.219-.937 1.406-5.957 1.406-5.957s-.359-.72-.359-1.781c0-1.663.967-2.911 2.168-2.911 1.024 0 1.518.769 1.518 1.688 0 1.029-.653 2.567-.992 3.992-.285 1.193.6 2.165 1.775 2.165 2.128 0 3.768-2.245 3.768-5.487 0-2.861-2.063-4.869-5.008-4.869-3.646 0-5.781 2.731-5.781 5.551 0 1.096.422 2.28 1.081 2.979.12.126.137.237.1.424-.13.522-.419 1.694-.476 1.929-.076.317-.253.385-.584.233-2.172-1.008-3.525-4.197-3.525-6.76 0-5.506 4.01-10.58 11.564-10.58 6.071 0 10.785 4.323 10.785 10.111 0 6.033-3.8 10.89-9.073 10.89-1.776 0-3.447-.92-4.018-2.012 0 0-.961 3.657-1.192 4.543-.432 1.66-1.597 3.743-2.378 5.011 1.791.529 3.693.817 5.655.817 6.619 0 11.988-5.367 11.988-11.987C24.005 5.367 18.636 0 12.017 0z"></path>
-            </svg>
-          </a>
-
-          <a class="mm-share-icon"
-             href="mailto:?subject=Memorial Tribute&body={page_url}"
-             aria-label="Share by Email">
-            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-              <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5L4 8V6l8 5 8-5v2z"></path>
-            </svg>
-          </a>
-        </div>
-      </div>
-
-      <div class="mm-tribute-cta">
-        <a href="{SITE_DOMAIN}/shop/" class="mm-btn">Explore Memorial Stones →</a>
-      </div>
-    </div>
-  </div>
-
-  <script type="application/ld+json">
-  {{
-    "@context": "https://schema.org",
-    "@type": "Article",
-    "mainEntityOfPage": {{
-      "@type": "WebPage",
-      "@id": "{page_url}"
-    }},
-    "headline": "{escape_json(title)}",
-    "image": ["{og_image_abs}"],
-    "datePublished": "{publish_date_iso}",
-    "dateModified": "{publish_date_iso}",
-    "author": {{
-      "@type": "Organization",
-      "name": "Melton Memorials"
-    }},
-    "publisher": {{
-      "@type": "Organization",
-      "name": "Melton Memorials"
-    }},
-    "description": "{escape_json(meta_desc)}"
-  }}
-  </script>
-</div>
-""".strip()
-
-    # Placeholder header/footer for future injection
-    header_html = ""
-    footer_html = ""
-
-    final_html = base.replace("{{HEAD_META}}", head_meta)
-    final_html = final_html.replace("{{HEADER}}", header_html)
-    final_html = final_html.replace("{{FOOTER}}", footer_html)
-    final_html = final_html.replace("{{CONTENT}}", content)
-
-    return final_html
 
 
 def escape_html(s: str) -> str:
