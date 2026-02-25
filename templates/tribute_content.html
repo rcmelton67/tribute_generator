@@ -10,16 +10,26 @@
     <h2 class="mm-tribute-subtitle">{{BREED_LINE}}</h2>
 
     <div class="mm-tribute-image">
-      <img src="{{IMAGE_PATH}}" alt="{{PET_NAME}} memorial portrait">
+      <img src="{{IMAGE_PATH}}" class="{{IMAGE_CLASS}}" alt="{{IMAGE_ALT}}">
     </div>
+    {{IMAGE_2_BLOCK}}
 
     <div class="mm-tribute-meta">
       {{DATES_BLOCK}}
       {{SHARED_BLOCK}}
     </div>
 
-    <div class="mm-tribute-message">
+    <div class="mm-tribute-message mm-tribute-message-centered">
       {{TRIBUTE_MESSAGE}}
+    </div>
+
+    <div class="mm-tribute-share">
+      <span class="mm-share-label">Share:</span>
+      <a class="mm-share-link" data-platform="facebook" href="{{SHARE_FACEBOOK_URL}}" target="_blank" rel="noopener noreferrer">Facebook</a>
+      <span class="mm-share-sep">|</span>
+      <a class="mm-share-link" data-platform="pinterest" href="{{SHARE_PINTEREST_URL}}" target="_blank" rel="noopener noreferrer">Pinterest</a>
+      <span class="mm-share-sep">|</span>
+      <a class="mm-share-link" data-platform="email" href="{{SHARE_EMAIL_URL}}">Email</a>
     </div>
 
   </div>

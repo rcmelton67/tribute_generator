@@ -373,6 +373,7 @@ body {
   font-size: 48px;
   margin: 0 0 12px;
   font-weight: 600;
+  text-align: center;
 }
 
 .mm-tribute-subtitle {
@@ -392,6 +393,14 @@ body {
   border-radius: 8px;
 }
 
+.mm-tribute-image.mm-tribute-image-secondary {
+  margin-top: -10px;
+}
+
+.mm-placeholder {
+  opacity: 0.85;
+}
+
 .mm-tribute-meta {
   margin-bottom: 40px;
   font-size: 15px;
@@ -408,6 +417,37 @@ body {
   font-size: 17px;
   max-width: 680px;
   margin: 0 auto;
+}
+
+.mm-tribute-share {
+  margin: 34px auto 0;
+  color: #777;
+  font-size: 14px;
+  letter-spacing: 0.2px;
+}
+
+.mm-share-label {
+  color: #666;
+  font-weight: 500;
+}
+
+.mm-share-link {
+  color: #7a7a7a;
+  text-decoration: none;
+  margin: 0 6px;
+}
+
+.mm-share-link:hover {
+  color: #555;
+  text-decoration: underline;
+}
+
+.mm-share-sep {
+  color: #b0b0b0;
+}
+
+.mm-tribute-message-centered {
+  text-align: center;
 }
 
 @media (max-width: 768px) {
