@@ -30,7 +30,7 @@ CARDS_PER_PAGE = 15
 TRIBUTE_CSS_HREF = "/pet-tributes/assets/mm-tribute.css"
 
 # Placeholder source used when no image is uploaded.
-PLACEHOLDER_IMAGE_FILE = os.path.join(TRIBUTES_DIR, "assets", "blank_pet_memorial.png")
+PLACEHOLDER_IMAGE_FILE = os.path.join(TRIBUTES_DIR, "assets", "blank_memorial_loving_memory.png")
 
 
 # ----------------------------
@@ -188,8 +188,15 @@ def save_data(items: list[dict]):
 
 
 def sort_entries_newest_first(items: list[dict]) -> list[dict]:
-    # ISO dates sort lexicographically when consistent
-    return sorted(items, key=lambda x: x.get("published_iso", ""), reverse=True)
+    # Primary sort: published date (newest first).
+    # Tie-breaker: original list position (later/appended entries first),
+    # so multiple tributes created on the same date still show newest first.
+    enumerated = list(enumerate(items))
+    enumerated.sort(
+        key=lambda pair: ((pair[1].get("published_iso", "") or ""), pair[0]),
+        reverse=True,
+    )
+    return [item for _, item in enumerated]
 
 
 def build_card_html(entry: dict) -> str:
@@ -218,12 +225,12 @@ def build_card_html(entry: dict) -> str:
     card_href = get_entry_web_base(entry)
     is_placeholder_card = (
         (not image_filename)
-        or image_filename == "blank_pet_memorial.png"
+        or image_filename == "blank_memorial_loving_memory.png"
         or image_filename == f"{slug}.png"
     )
     card_img_src = (
-        "/pet-tributes/assets/blank_pet_memorial.png"
-        if (not image_filename or image_filename == "blank_pet_memorial.png")
+        "/pet-tributes/assets/blank_memorial_loving_memory.png"
+        if (not image_filename or image_filename == "blank_memorial_loving_memory.png")
         else f"{card_href}{escape_html(image_filename)}"
     )
     card_thumb_class = "mm-archive-thumb mm-placeholder" if is_placeholder_card else "mm-archive-thumb"
@@ -323,8 +330,8 @@ def build_archive_full_html(cards_html: str, current_page: int, total_pages: int
 def rebuild_archive_pages(entries):
     from math import ceil
 
-    # Sort newest first
-    entries = sorted(entries, key=lambda x: x.get("published_iso", ""), reverse=True)
+    # Sort newest first (with same-day tie-breaker handled in helper)
+    entries = sort_entries_newest_first(entries)
 
     total_pages = ceil(len(entries) / CARDS_PER_PAGE)
 
@@ -442,7 +449,7 @@ def build_tribute_html(
     page_url: str,
     tribute_web_path: str,
     og_image_abs: str,
-    is_placeholder_image: bool,
+    user_uploaded_image: bool,
     second_image_filename: str,
     publish_date_iso: str,
     tribute_message_html: str,
@@ -475,7 +482,6 @@ def build_tribute_html(
 
     breed_line = subtitle
     input_filename = os.path.basename(relative_filename_from_url(og_image_abs))
-    is_placeholder = bool(is_placeholder_image) or (input_filename == "blank_pet_memorial.png")
 
     # Determine image file/path from provided URL filename. If empty, fall back to shared placeholder.
     if input_filename:
@@ -483,11 +489,14 @@ def build_tribute_html(
         image_path = f"{tribute_web_path}{image_filename}"
         og_image = f"{SITE_DOMAIN}{tribute_web_path}{image_filename}"
     else:
-        image_filename = "blank_pet_memorial.png"
+        image_filename = "blank_memorial_loving_memory.png"
         image_path = f"/pet-tributes/assets/{image_filename}"
         og_image = f"{SITE_DOMAIN}/pet-tributes/assets/{image_filename}"
 
-    image_class = "mm-placeholder" if is_placeholder else ""
+    if user_uploaded_image:
+        image_class = ""
+    else:
+        image_class = "mm-placeholder"
     second_image_filename = (second_image_filename or "").strip()
     image_alt = f"{pet_name} {pet_type_clean} memorial portrait".strip() if pet_type_clean else f"{pet_name} memorial portrait"
     image_2_block = ""
@@ -594,6 +603,33 @@ def relative_filename_from_url(url: str) -> str:
 # GUI App
 # ----------------------------
 class TributePublisherApp:
+    @staticmethod
+    def _bind_tab_navigation(current_widget, next_widget, prev_widget):
+        def go_next(_event):
+            next_widget.focus_set()
+            return "break"
+
+        def go_prev(_event):
+            prev_widget.focus_set()
+            return "break"
+
+        current_widget.bind("<Tab>", go_next)
+        current_widget.bind("<Shift-Tab>", go_prev)
+        # Some Tk builds (notably on Windows) do not support ISO_Left_Tab.
+        try:
+            current_widget.bind("<ISO_Left_Tab>", go_prev)
+        except Exception:
+            pass
+
+    def _apply_create_form_tab_order(self, widgets):
+        ordered = [w for w in widgets if w is not None]
+        if not ordered:
+            return
+        for i, widget in enumerate(ordered):
+            prev_widget = ordered[i - 1]
+            next_widget = ordered[(i + 1) % len(ordered)]
+            self._bind_tab_navigation(widget, next_widget, prev_widget)
+
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title("Melton Memorials — Tribute Publisher")
@@ -653,8 +689,10 @@ class TributePublisherApp:
         self.img_label = tk.Label(img_row, textvariable=self.image_path, width=34, anchor="w")
         self.img_label.pack(side="left")
 
-        tk.Button(img_row, text="Choose…", command=self.choose_image).pack(side="left", padx=6)
-        tk.Button(img_row, text="Clear", command=self.clear_image).pack(side="left")
+        self.btn_choose_image = tk.Button(img_row, text="Choose…", command=self.choose_image)
+        self.btn_choose_image.pack(side="left", padx=6)
+        self.btn_clear_image = tk.Button(img_row, text="Clear", command=self.clear_image)
+        self.btn_clear_image.pack(side="left")
 
         tk.Label(create_frame, text="Photo 2 (optional)").grid(row=8, column=0, sticky="w", **pad)
 
@@ -663,17 +701,37 @@ class TributePublisherApp:
 
         self.img2_label = tk.Label(img2_row, textvariable=self.image2_path, width=34, anchor="w")
         self.img2_label.pack(side="left")
-        tk.Button(img2_row, text="Choose…", command=self.choose_image2).pack(side="left", padx=6)
-        tk.Button(img2_row, text="Clear", command=self.clear_image2).pack(side="left")
+        self.btn_choose_image2 = tk.Button(img2_row, text="Choose…", command=self.choose_image2)
+        self.btn_choose_image2.pack(side="left", padx=6)
+        self.btn_clear_image2 = tk.Button(img2_row, text="Clear", command=self.clear_image2)
+        self.btn_clear_image2.pack(side="left")
 
-        tk.Button(create_frame, text="Generate Tribute Files", command=self.generate, height=2, width=26)\
-            .grid(row=11, column=1, sticky="w", padx=10, pady=14)
+        self.btn_generate = tk.Button(
+            create_frame, text="Generate Tribute Files", command=self.generate, height=2, width=26
+        )
+        self.btn_generate.grid(row=11, column=1, sticky="w", padx=10, pady=14)
 
         tk.Label(
             create_frame,
             text=f"Output: {TRIBUTES_DIR}\nArchive: {ARCHIVE_INDEX}",
             fg="#444"
         ).grid(row=12, column=0, columnspan=2, sticky="w", padx=10, pady=6)
+
+        # Force tab flow to match the visible top-to-bottom form layout.
+        self._apply_create_form_tab_order([
+            self.pet_name,
+            self.pet_type,
+            self.breed,
+            self.years,
+            self.message,
+            self.btn_choose_image,
+            self.btn_clear_image,
+            self.btn_choose_image2,
+            self.btn_clear_image2,
+            self.first_name,
+            self.state,
+            self.btn_generate,
+        ])
 
         # manager tab layout
         self.checked_slugs = set()
@@ -919,9 +977,10 @@ class TributePublisherApp:
         img_abs_url = ""
         img_filename = None
         img2_filename = ""
-        is_placeholder_image = False
 
         chosen_image = self.image_path.get().strip()
+        # Determine if user uploaded image 1
+        user_uploaded_image = bool(chosen_image)
         if chosen_image:
             if not ensure_pillow():
                 messagebox.showerror(
@@ -957,7 +1016,6 @@ class TributePublisherApp:
                 messagebox.showerror("Placeholder copy failed", f"Could not prepare fallback image:\n{e}")
                 return
             img_abs_url = f"{SITE_DOMAIN}{tribute_web_path}{img_filename}"
-            is_placeholder_image = True
 
         chosen_image2 = self.image2_path.get().strip()
         if chosen_image2:
@@ -999,7 +1057,7 @@ class TributePublisherApp:
             page_url=page_url,
             tribute_web_path=tribute_web_path,
             og_image_abs=img_abs_url,
-            is_placeholder_image=is_placeholder_image,
+            user_uploaded_image=user_uploaded_image,
             second_image_filename=img2_filename,
             publish_date_iso=publish_date_iso,
             tribute_message_html=tribute_message_html,

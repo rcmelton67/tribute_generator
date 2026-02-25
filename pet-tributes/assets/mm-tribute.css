@@ -166,7 +166,7 @@ body {
 
 .mm-archive-thumb img {
     width: 100%;
-    height: 340px;
+    height: 380px;
     object-fit: cover;
     display: block;
     transition: transform 0.4s ease;
@@ -175,6 +175,7 @@ body {
 .mm-archive-card:hover .mm-archive-thumb img {
     transform: scale(1.06);
 }
+
 
 /* ==========================================
    CONTENT
@@ -401,35 +402,54 @@ body {
   opacity: 0.85;
 }
 
-/* Wrapper for image */
+/* Ensure wrapper allows absolute positioning */
 .mm-image-wrapper {
   position: relative;
-  display: inline-block;
 }
 
-/* Hide overlay by default */
+/* Base hidden state */
 .mm-stone-name {
+  position: absolute;
   display: none;
 }
 
-/* ONLY show overlay when placeholder image is used */
+/* Show only when placeholder image is used */
 .mm-image-wrapper.mm-placeholder .mm-stone-name {
   display: block;
-  position: absolute;
-  top: 50%;
+
+  top: 52%;
   left: 50%;
   transform: translate(-50%, -50%);
+
   font-family: "Playfair Display", Georgia, serif;
   font-weight: 600;
-  font-size: clamp(26px, 5vw, 52px);
-  color: #000;
+
+  line-height: 1.05;
   letter-spacing: 1px;
+  width: 64% !important;
+  max-width: 250px !important;
   text-align: center;
-  width: 80%;
-  line-height: 1.2;
+  color: #1f1f1f;
+
   text-shadow:
-    0 1px 0 rgba(255,255,255,0.35),
-    0 2px 3px rgba(0,0,0,0.15);
+    0 1px 0 rgba(255,255,255,0.6),
+    0 -1px 1px rgba(0,0,0,0.25),
+    0 2px 4px rgba(0,0,0,0.15);
+
+  /* Wrapping control */
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: break-word;
+
+  font-size: 22px !important;   /* THIS is card size */
+}
+
+/* Tribute page adjustment */
+.mm-tribute-system .mm-image-wrapper.mm-placeholder .mm-stone-name {
+  top: 54% !important;
+  width: 58% !important;
+  max-width: 520px !important;
+  font-size: 52px !important;   /* THIS is tribute page size */
 }
 
 /* Archive card overlay for placeholder cards */
@@ -452,6 +472,7 @@ body {
     0 2px 3px rgba(0,0,0,0.15);
   pointer-events: none;
 }
+
 
 .mm-tribute-meta {
   margin-bottom: 40px;
@@ -516,4 +537,22 @@ body {
     padding: 60px 16px 80px;
   }
 
+}
+
+
+/* ======================================
+   Archive cards - reduce stone size slightly
+   ====================================== */
+
+.mm-image-wrapper.mm-placeholder img {
+  width: 92% !important;      /* was effectively 100% */
+  height: auto !important;
+  object-fit: contain !important;
+  margin: 0 auto;
+}
+
+.mm-tribute-card:hover img,
+.mm-tribute-card img {
+  transform: none !important;
+  transition: none !important;
 }

@@ -1,36 +1,49 @@
-document.addEventListener("DOMContentLoaded", function () {
-    const shareContainer = document.querySelector(".mm-tribute-share");
-    if (!shareContainer) return;
+document.addEventListener("DOMContentLoaded", () => {
+  // Archive search: show only matching tribute cards.
+  const searchInput = document.getElementById("tributeSearch");
+  const cards = Array.from(document.querySelectorAll(".mm-archive-card"));
+  if (searchInput && cards.length) {
+    const normalize = (value) => (value || "").toLowerCase().trim();
 
-    const pageUrl = window.location.href;
-    const titleText = (document.querySelector(".mm-tribute-name")?.textContent || document.title || "").trim();
-    const messageText = (document.querySelector(".mm-tribute-message")?.textContent || "").replace(/\s+/g, " ").trim();
-    const imageEl = document.querySelector(".mm-tribute-image img");
-    const imageUrl = imageEl?.getAttribute("src")
-        ? new URL(imageEl.getAttribute("src"), window.location.href).href
-        : "";
+    searchInput.addEventListener("input", function () {
+      const query = normalize(this.value);
 
-    const encodedUrl = encodeURIComponent(pageUrl);
-    const encodedTitle = encodeURIComponent(titleText || "Memorial Tribute");
-    const encodedMessage = encodeURIComponent(messageText || "Memorial tribute");
-    const encodedImage = encodeURIComponent(imageUrl);
+      cards.forEach((card) => {
+        const searchableText = normalize(
+          `${card.dataset.name || ""} ${card.dataset.breed || ""} ${card.dataset.years || ""} ${card.dataset.content || ""}`
+        );
 
-    const fbLink = shareContainer.querySelector('[data-platform="facebook"]');
-    const pinLink = shareContainer.querySelector('[data-platform="pinterest"]');
-    const emailLink = shareContainer.querySelector('[data-platform="email"]');
+        const words = searchableText.split(/\s+/).filter(Boolean);
+        const startsWithWord = words.some((word) => word.startsWith(query));
+        const includesAnywhere = searchableText.includes(query);
+        const matches = !query || startsWithWord || includesAnywhere;
+        card.style.display = matches ? "" : "none";
+      });
+    });
+  }
 
-    if (fbLink) {
-        fbLink.href = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
-    }
+  // If we're on a single tribute page, stop here.
+  if (document.querySelector(".mm-tribute-system")) return;
 
-    if (pinLink) {
-        pinLink.href = imageUrl
-            ? `https://pinterest.com/pin/create/button/?url=${encodedUrl}&media=${encodedImage}&description=${encodedMessage}`
-            : `https://pinterest.com/pin/create/button/?url=${encodedUrl}&description=${encodedMessage}`;
-    }
+  // Archive/card pages: shrink long placeholder names
+  const names = document.querySelectorAll(".mm-image-wrapper.mm-placeholder .mm-stone-name");
+  if (!names.length) return;
 
-    if (emailLink) {
-        const body = `I wanted to share this memorial tribute with you:\n\n${titleText}\n\n${pageUrl}`;
-        emailLink.href = `mailto:?subject=${encodedTitle}&body=${encodeURIComponent(body)}`;
-    }
+  names.forEach((el) => {
+    const name = (el.textContent || "").trim();
+    const len = name.length;
+
+    // Base: make cards consistent
+    el.style.width = "50%";
+    el.style.maxWidth = "200px";
+
+    let fontSize = 26;
+    if (len <= 4) fontSize = 30;
+    else if (len <= 8) fontSize = 28;
+    else if (len <= 14) fontSize = 24;
+    else if (len <= 20) fontSize = 20;
+    else fontSize = 18;
+
+    el.style.fontSize = `${fontSize}px`;
+  });
 });
