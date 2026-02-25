@@ -342,3 +342,86 @@ body {
     background: #2c3e50;
     color: #fff;
 }
+
+.mm-tribute-system {
+  padding: 80px 20px 100px;
+  width: 100%;
+}
+
+.mm-tribute-wrapper {
+  max-width: 760px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.mm-tribute-intro {
+  font-size: 14px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  opacity: 0.8;
+}
+
+.mm-tribute-divider {
+  width: 60px;
+  height: 2px;
+  margin: 20px auto 30px;
+  background: rgba(0,0,0,0.4);
+}
+
+.mm-tribute-name {
+  font-size: 48px;
+  margin: 0 0 12px;
+  font-weight: 600;
+}
+
+.mm-tribute-subtitle {
+  font-size: 18px;
+  margin-bottom: 40px;
+  opacity: 0.85;
+}
+
+.mm-tribute-image {
+  margin: 0 auto 40px;
+}
+
+.mm-tribute-image img {
+  max-width: 420px;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.mm-tribute-meta {
+  margin-bottom: 40px;
+  font-size: 15px;
+  opacity: 0.8;
+}
+
+.mm-tribute-meta p {
+  margin: 4px 0;
+}
+
+.mm-tribute-message {
+  text-align: left;
+  line-height: 1.8;
+  font-size: 17px;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+
+  .mm-tribute-name {
+    font-size: 34px;
+  }
+
+  .mm-tribute-image img {
+    max-width: 300px;
+  }
+
+  .mm-tribute-system {
+    padding: 60px 16px 80px;
+  }
+
+}

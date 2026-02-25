@@ -1,27 +1,26 @@
-<div class="mm-tribute-system">
-    <div class="mm-tribute-wrapper">
-  
-      <p class="mm-memorial-line">In Loving Memory of</p>
-  
-      <h1 class="mm-tribute-name">{{PET_NAME}}</h1>
-  
-      <p class="mm-tribute-subtitle">{{SUBTITLE}}</p>
-  
-      <div class="mm-tribute-divider"></div>
-  
-      <img src="{{IMAGE_SRC}}"
-           alt="{{PET_NAME}} memorial tribute photo"
-           style="max-width:100%; height:auto; display:block; margin: 1rem 0; border-radius: 10px;">
-  
-      <div class="mm-tribute-body">
-        <div class="mm-tribute-message">
-          {{TRIBUTE_MESSAGE}}
-        </div>
-      </div>
-  
-      <p class="mm-years">{{YEARS}}</p>
-  
-      {{SUBMITTER_LINE}}
-  
+<section class="mm-tribute-system">
+  <div class="mm-tribute-wrapper">
+
+    <p class="mm-tribute-intro">In Loving Memory of</p>
+
+    <div class="mm-tribute-divider"></div>
+
+    <h1 class="mm-tribute-name">{{PET_NAME}}</h1>
+
+    <h2 class="mm-tribute-subtitle">{{BREED_LINE}}</h2>
+
+    <div class="mm-tribute-image">
+      <img src="{{IMAGE_PATH}}" alt="{{PET_NAME}} memorial portrait">
     </div>
+
+    <div class="mm-tribute-meta">
+      {{DATES_BLOCK}}
+      {{SHARED_BLOCK}}
+    </div>
+
+    <div class="mm-tribute-message">
+      {{TRIBUTE_MESSAGE}}
+    </div>
+
   </div>
+</section>

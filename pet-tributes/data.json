@@ -372,5 +372,38 @@
     "state": "AR",
     "published_iso": "2026-02-24",
     "image_filename": "boomer-poodle.webp"
+  },
+  {
+    "slug": "pugh-cat",
+    "pet_name": "Pugh",
+    "breed": "Cat",
+    "years_pretty": "2027",
+    "excerpt": "Sammy\nSammy\nSammy\nSammy\nSammy\nSammy\nSammy\nSammy\nSammy\nSammy\nSammy\nSammy\nSammy\nSammy",
+    "first_name": "Mr",
+    "state": "AZ",
+    "published_iso": "2026-02-24",
+    "image_filename": "pugh-cat.webp"
+  },
+  {
+    "slug": "cookie-german-shepard",
+    "pet_name": "Cookie",
+    "breed": "German Shepard",
+    "years_pretty": "2017",
+    "excerpt": "a new test tribute page",
+    "first_name": "Tina",
+    "state": "ID",
+    "published_iso": "2026-02-24",
+    "image_filename": "cookie-german-shepard.webp"
+  },
+  {
+    "slug": "teset-jjff",
+    "pet_name": "teset",
+    "breed": "jjff",
+    "years_pretty": "2020",
+    "excerpt": "jkjkkl",
+    "first_name": "tesdert",
+    "state": "jf",
+    "published_iso": "2026-02-24",
+    "image_filename": "blank-stone.webp"
   }
 ]

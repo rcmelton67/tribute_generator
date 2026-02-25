@@ -384,12 +384,12 @@ def build_tribute_html(
     # ----- Title / subtitle logic -----
     breed_clean = (breed or "").strip()
     if breed_clean:
-        title = f"{pet_name} – {breed_clean} Memorial Tribute"
         subtitle = f"{breed_clean} Memorial Tribute"
+        title = f"{pet_name} – {subtitle} | Melton Memorials"
         og_desc = excerpt or f"Read the memorial tribute honoring {pet_name}."
     else:
-        title = f"{pet_name} – Memorial Tribute"
-        subtitle = "Memorial Tribute"
+        subtitle = "Pet Memorial Tribute"
+        title = f"{pet_name} – Pet Memorial Tribute | Melton Memorials"
         og_desc = excerpt or f"Read the memorial tribute honoring {pet_name}."
 
     meta_desc = excerpt if excerpt else f"A memorial tribute honoring {pet_name}."
@@ -398,10 +398,11 @@ def build_tribute_html(
 
     submitter_parts = [p for p in [first_name.strip(), state.strip()] if p]
     submitter_line = ", ".join(submitter_parts)
-    submitter_html = (
-        f'<p class="mm-tribute-origin">Shared by {escape_html(submitter_line)}</p>'
-        if submitter_line else ""
-    )
+
+    breed_line = subtitle
+    image_path = relative_filename_from_url(og_image_abs)
+    dates_block = f"<p>{escape_html(years_pretty)}</p>" if years_pretty.strip() else ""
+    shared_block = f"<p>Shared by {escape_html(submitter_line)}</p>" if submitter_line else ""
 
     # ----- Load base template -----
     base = load_template("base.html")
@@ -434,11 +435,11 @@ def build_tribute_html(
     content = load_template("tribute_content.html")
 
     content = content.replace("{{PET_NAME}}", escape_html(pet_name))
-    content = content.replace("{{SUBTITLE}}", escape_html(subtitle))
-    content = content.replace("{{IMAGE_SRC}}", relative_filename_from_url(og_image_abs))
+    content = content.replace("{{BREED_LINE}}", escape_html(breed_line))
+    content = content.replace("{{IMAGE_PATH}}", image_path)
+    content = content.replace("{{DATES_BLOCK}}", dates_block)
+    content = content.replace("{{SHARED_BLOCK}}", shared_block)
     content = content.replace("{{TRIBUTE_MESSAGE}}", tribute_message_html)
-    content = content.replace("{{YEARS}}", escape_html(years_pretty))
-    content = content.replace("{{SUBMITTER_LINE}}", submitter_html)
 
     # ----- Load header + footer -----
     header_template = load_template("header.html")

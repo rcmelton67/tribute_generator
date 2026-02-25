@@ -1,0 +1,82 @@
+/* =========================================
+   SOCIAL SHARE COMPONENT
+   Standalone, portable styles for tribute sharing.
+   ========================================= */
+
+.mm-tribute-share {
+    margin-top: 40px;
+    padding: 30px 0;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    text-align: center;
+}
+
+.mm-share-label {
+    font-family: 'Libre Baskerville', serif;
+    font-size: 1.1rem;
+    color: #4a4a4a;
+    margin-bottom: 20px;
+}
+
+.mm-share-icons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    align-items: center;
+}
+
+.mm-share-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    color: #555;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.mm-share-icon:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+    border-color: #2c3e50;
+    color: #2c3e50;
+}
+
+.mm-share-icon svg {
+    fill: currentColor;
+    transition: fill 0.25s ease;
+}
+
+/* Brand-specific hover colors (optional, keeping it premium/neutral by default) */
+.mm-share-icon:hover[aria-label*="Facebook"] {
+    background: #1877f2;
+    border-color: #1877f2;
+    color: #ffffff;
+}
+
+.mm-share-icon:hover[aria-label*="Pinterest"] {
+    background: #bd081c;
+    border-color: #bd081c;
+    color: #ffffff;
+}
+
+.mm-share-icon:hover[aria-label*="Email"] {
+    background: #2c3e50;
+    border-color: #2c3e50;
+    color: #ffffff;
+}
+
+@media (max-width: 600px) {
+    .mm-tribute-share {
+        padding: 24px 0;
+    }
+
+    .mm-share-icon {
+        width: 40px;
+        height: 40px;
+    }
+}
