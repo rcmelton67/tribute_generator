@@ -401,6 +401,58 @@ body {
   opacity: 0.85;
 }
 
+/* Wrapper for image */
+.mm-image-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+/* Hide overlay by default */
+.mm-stone-name {
+  display: none;
+}
+
+/* ONLY show overlay when placeholder image is used */
+.mm-image-wrapper.mm-placeholder .mm-stone-name {
+  display: block;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: "Playfair Display", Georgia, serif;
+  font-weight: 600;
+  font-size: clamp(26px, 5vw, 52px);
+  color: #000;
+  letter-spacing: 1px;
+  text-align: center;
+  width: 80%;
+  line-height: 1.2;
+  text-shadow:
+    0 1px 0 rgba(255,255,255,0.35),
+    0 2px 3px rgba(0,0,0,0.15);
+}
+
+/* Archive card overlay for placeholder cards */
+.mm-archive-thumb.mm-placeholder .mm-stone-name-card {
+  display: block;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: "Playfair Display", Georgia, serif;
+  font-weight: 600;
+  font-size: clamp(20px, 3.4vw, 40px);
+  color: #000;
+  letter-spacing: 0.8px;
+  text-align: center;
+  width: 80%;
+  line-height: 1.2;
+  text-shadow:
+    0 1px 0 rgba(255,255,255,0.35),
+    0 2px 3px rgba(0,0,0,0.15);
+  pointer-events: none;
+}
+
 .mm-tribute-meta {
   margin-bottom: 40px;
   font-size: 15px;

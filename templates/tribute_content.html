@@ -10,7 +10,10 @@
     <h2 class="mm-tribute-subtitle">{{BREED_LINE}}</h2>
 
     <div class="mm-tribute-image">
-      <img src="{{IMAGE_PATH}}" class="{{IMAGE_CLASS}}" alt="{{IMAGE_ALT}}">
+      <div class="mm-image-wrapper {{IMAGE_CLASS}}">
+        <img src="{{IMAGE_PATH}}" alt="{{PET_NAME}} memorial tribute">
+        <div class="mm-stone-name">{{PET_NAME}}</div>
+      </div>
     </div>
     {{IMAGE_2_BLOCK}}
 

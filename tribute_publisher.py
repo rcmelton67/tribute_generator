@@ -216,10 +216,20 @@ def build_card_html(entry: dict) -> str:
     title_line = escape_html(pet_name + (f" – {subtitle_for_card}" if subtitle_for_card else ""))
 
     card_href = get_entry_web_base(entry)
+    is_placeholder_card = (
+        (not image_filename)
+        or image_filename == "blank_pet_memorial.png"
+        or image_filename == f"{slug}.png"
+    )
     card_img_src = (
-        f"/pet-tributes/assets/{escape_html(image_filename)}"
-        if image_filename == "blank_pet_memorial.png"
+        "/pet-tributes/assets/blank_pet_memorial.png"
+        if (not image_filename or image_filename == "blank_pet_memorial.png")
         else f"{card_href}{escape_html(image_filename)}"
+    )
+    card_thumb_class = "mm-archive-thumb mm-placeholder" if is_placeholder_card else "mm-archive-thumb"
+    card_overlay_html = (
+        f'<div class="mm-stone-name mm-stone-name-card">{escape_html(pet_name)}</div>'
+        if is_placeholder_card else ""
     )
 
     return f"""
@@ -230,9 +240,10 @@ def build_card_html(entry: dict) -> str:
   data-content="{escape_html(excerpt)}"
 >
   <a class="mm-archive-link" href="{card_href}">
-    <div class="mm-archive-thumb">
+    <div class="{card_thumb_class}">
       <span class="mm-date-badge">{escape_html(publish_label)}</span>
       <img src="{card_img_src}" alt="{escape_html(pet_name)} memorial tribute" loading="lazy">
+      {card_overlay_html}
     </div>
     <div class="mm-archive-meta">
       <h2 class="mm-archive-title">{title_line}</h2>
@@ -431,6 +442,7 @@ def build_tribute_html(
     page_url: str,
     tribute_web_path: str,
     og_image_abs: str,
+    is_placeholder_image: bool,
     second_image_filename: str,
     publish_date_iso: str,
     tribute_message_html: str,
@@ -462,12 +474,11 @@ def build_tribute_html(
     submitter_line = ", ".join(submitter_parts)
 
     breed_line = subtitle
-    slug = page_url.rstrip("/").split("/")[-1]
     input_filename = os.path.basename(relative_filename_from_url(og_image_abs))
-    is_placeholder = (not input_filename) or (input_filename == "blank_pet_memorial.png")
+    is_placeholder = bool(is_placeholder_image) or (input_filename == "blank_pet_memorial.png")
 
-    # Determine image file
-    if not is_placeholder:
+    # Determine image file/path from provided URL filename. If empty, fall back to shared placeholder.
+    if input_filename:
         image_filename = input_filename
         image_path = f"{tribute_web_path}{image_filename}"
         og_image = f"{SITE_DOMAIN}{tribute_web_path}{image_filename}"
@@ -908,6 +919,7 @@ class TributePublisherApp:
         img_abs_url = ""
         img_filename = None
         img2_filename = ""
+        is_placeholder_image = False
 
         chosen_image = self.image_path.get().strip()
         if chosen_image:
@@ -945,6 +957,7 @@ class TributePublisherApp:
                 messagebox.showerror("Placeholder copy failed", f"Could not prepare fallback image:\n{e}")
                 return
             img_abs_url = f"{SITE_DOMAIN}{tribute_web_path}{img_filename}"
+            is_placeholder_image = True
 
         chosen_image2 = self.image2_path.get().strip()
         if chosen_image2:
@@ -986,6 +999,7 @@ class TributePublisherApp:
             page_url=page_url,
             tribute_web_path=tribute_web_path,
             og_image_abs=img_abs_url,
+            is_placeholder_image=is_placeholder_image,
             second_image_filename=img2_filename,
             publish_date_iso=publish_date_iso,
             tribute_message_html=tribute_message_html,
