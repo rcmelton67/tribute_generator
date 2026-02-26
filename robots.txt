@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://meltonmemorials.com/pet-tributes/sitemap.xml

@@ -4,9 +4,11 @@ import os
 import re
 import shutil
 import json
+import unicodedata
 from datetime import datetime
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, ttk
+from PIL import Image
 
 # ----------------------------
 # CONFIG (edit if needed)
@@ -25,6 +27,8 @@ MEMORIALS_DIR = os.path.join(TRIBUTES_DIR, "memorials")
 ARCHIVE_INDEX = os.path.join(TRIBUTES_DIR, "index.html")
 ARCHIVE_DATA = os.path.join(TRIBUTES_DIR, "data.json")
 CARDS_PER_PAGE = 15
+MAX_IMAGE_WIDTH = 1200
+WEBP_QUALITY = 85
 
 # CSS path used by the generated tribute pages (adjust if your live path differs)
 TRIBUTE_CSS_HREF = "/pet-tributes/assets/mm-tribute.css"
@@ -79,6 +83,58 @@ def first_sentence(text: str) -> str:
     return (t[:140].rstrip() + ("…" if len(t) > 140 else ""))
 
 
+def summarize_excerpt(text: str, max_chars: int = 220) -> str:
+    """Create a readable multi-sentence excerpt for cards/meta."""
+    t = re.sub(r"\s+", " ", (text or "").strip())
+    if not t:
+        return ""
+    if len(t) <= max_chars:
+        return t
+    cut = t[:max_chars]
+    # Prefer ending on sentence punctuation before hard cut.
+    m = re.search(r"^(.+?[.!?])(?:\s|$)", cut)
+    if m and len(m.group(1)) >= 80:
+        return m.group(1).strip()
+    # Fall back to nearest word boundary.
+    if " " in cut:
+        cut = cut.rsplit(" ", 1)[0]
+    return cut.rstrip(".,;:!? ") + "..."
+
+
+def clean_meta_preview(text: str, max_chars: int = 120) -> str:
+    """
+    Build a readable preview for meta descriptions:
+    - normalize whitespace
+    - strip emoji/symbol chars that can cause encoding/display issues
+    - prefer sentence boundary cut, else cut on a whole word
+    """
+    raw = re.sub(r"<[^>]+>", " ", (text or ""))
+    raw = re.sub(r"\s+", " ", raw).strip()
+    if not raw:
+        return ""
+
+    # Strip symbols/emojis while keeping letters, numbers, punctuation, and spaces.
+    filtered = "".join(
+        ch for ch in raw
+        if unicodedata.category(ch) not in {"So", "Cs", "Co", "Cn"}
+    )
+    filtered = re.sub(r"\s+", " ", filtered).strip()
+    if not filtered:
+        return ""
+
+    if len(filtered) <= max_chars:
+        return filtered.rstrip(" ,;:-")
+
+    chunk = filtered[:max_chars]
+    sentence_end = max(chunk.rfind(". "), chunk.rfind("! "), chunk.rfind("? "))
+    if sentence_end >= int(max_chars * 0.5):
+        return chunk[: sentence_end + 1].strip()
+
+    if " " in chunk:
+        chunk = chunk.rsplit(" ", 1)[0]
+    return chunk.rstrip(" ,;:-")
+
+
 def normalize_dates_text(value: str) -> str:
     """
     Normalize dates text to avoid mojibake like 'â€“' and keep separators consistent.
@@ -120,13 +176,29 @@ def find_tribute_folder(slug: str, folder_hint: str = "") -> str:
 
 def ensure_pillow():
     try:
-        from PIL import Image  # noqa
-        return True
+        return Image is not None
     except Exception:
         return False
 
 
-def convert_to_webp_normalized(src_path: str, dest_path: str, max_width: int = 1200, quality: int = 82) -> dict:
+def process_placeholder_image(source_png_path: str, output_path: str):
+    with Image.open(source_png_path) as img:
+        img = img.convert("RGB")
+
+        if img.width > MAX_IMAGE_WIDTH:
+            ratio = MAX_IMAGE_WIDTH / img.width
+            new_height = int(img.height * ratio)
+            img = img.resize((MAX_IMAGE_WIDTH, new_height), Image.LANCZOS)
+
+        img.save(output_path, "WEBP", quality=WEBP_QUALITY)
+
+
+def convert_to_webp_normalized(
+    src_path: str,
+    dest_path: str,
+    max_width: int = MAX_IMAGE_WIDTH,
+    quality: int = WEBP_QUALITY,
+) -> dict:
     """
     Convert an uploaded image to WebP and normalize size:
     - If source width > max_width, downscale to max_width preserving aspect ratio
@@ -213,13 +285,20 @@ def build_card_html(entry: dict) -> str:
         publish_label = dt.strftime("%b %Y")
     first_name = (entry.get("first_name") or "").strip()
     state = (entry.get("state") or "").strip()
+    email = (entry.get("email") or "").strip()
 
     attribution_html = ""
     if first_name or state:
         parts = [p for p in [first_name, state] if p]
         attribution_html = f'<div class="mm-archive-attribution">{escape_html(", ".join(parts))}</div>'
 
-    subtitle_for_card = breed if breed else pet_type
+    subtitle_for_card = ""
+    if breed and pet_type:
+        subtitle_for_card = f"{breed} {pet_type}"
+    elif breed:
+        subtitle_for_card = breed
+    elif pet_type:
+        subtitle_for_card = pet_type
     title_line = escape_html(pet_name + (f" – {subtitle_for_card}" if subtitle_for_card else ""))
 
     card_href = get_entry_web_base(entry)
@@ -227,6 +306,8 @@ def build_card_html(entry: dict) -> str:
         (not image_filename)
         or image_filename == "blank_memorial_loving_memory.png"
         or image_filename == f"{slug}.png"
+        or image_filename.endswith("-memorial-stone.png")
+        or image_filename.endswith("-memorial-stone.webp")
     )
     card_img_src = (
         "/pet-tributes/assets/blank_memorial_loving_memory.png"
@@ -234,27 +315,34 @@ def build_card_html(entry: dict) -> str:
         else f"{card_href}{escape_html(image_filename)}"
     )
     card_thumb_class = "mm-archive-thumb mm-placeholder" if is_placeholder_card else "mm-archive-thumb"
-    card_overlay_html = (
-        f'<div class="mm-stone-name mm-stone-name-card">{escape_html(pet_name)}</div>'
-        if is_placeholder_card else ""
+    card_more_html = (
+        '<div class="mm-archive-more" aria-hidden="true">'
+        '<span class="mm-archive-more-label">more</span>'
+        '<span class="mm-archive-chevron">&#8250;</span>'
+        "</div>"
+        if excerpt else ""
     )
 
     return f"""
 <article class="mm-archive-card"
   data-name="{escape_html(pet_name)}"
   data-breed="{escape_html(breed)}"
+  data-type="{escape_html(pet_type)}"
   data-years="{escape_html(years_pretty)}"
   data-content="{escape_html(excerpt)}"
+  data-first-name="{escape_html(first_name)}"
+  data-state="{escape_html(state)}"
+  data-email="{escape_html(email)}"
 >
   <a class="mm-archive-link" href="{card_href}">
     <div class="{card_thumb_class}">
       <span class="mm-date-badge">{escape_html(publish_label)}</span>
       <img src="{card_img_src}" alt="{escape_html(pet_name)} memorial tribute" loading="lazy">
-      {card_overlay_html}
     </div>
     <div class="mm-archive-meta">
       <h2 class="mm-archive-title">{title_line}</h2>
       <p class="mm-archive-excerpt">{escape_html(excerpt)}</p>
+      {card_more_html}
       <p class="mm-archive-years">{escape_html(years_pretty)}</p>
       {attribution_html}
     </div>
@@ -291,7 +379,34 @@ def build_pagination(current: int, total: int) -> str:
     return f'<div class="mm-pagination">{" ".join(parts)}</div>'
 
 
-def build_archive_full_html(cards_html: str, current_page: int, total_pages: int) -> str:
+def build_archive_schema(base_url: str, tributes: list[dict]) -> str:
+    item_list = []
+    for index, tribute in enumerate(tributes, start=1):
+        slug = (tribute.get("slug") or "").strip()
+        if not slug:
+            continue
+        tribute_name = (tribute.get("pet_name") or tribute.get("name") or "").strip()
+        item_list.append({
+            "@type": "ListItem",
+            "position": index,
+            "url": f"{base_url}{get_entry_web_base(tribute)}",
+            "name": f"{tribute_name} Memorial Tribute".strip(),
+        })
+
+    schema = {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        "name": "Pet Memorial Tributes",
+        "url": f"{base_url}/pet-tributes/",
+        "mainEntity": {
+            "@type": "ItemList",
+            "itemListElement": item_list,
+        },
+    }
+    return json.dumps(schema, ensure_ascii=False, indent=2)
+
+
+def build_archive_full_html(cards_html: str, current_page: int, total_pages: int, tribute_entries: list[dict]) -> str:
 
     title = "Pet Memorial Tributes" if current_page == 1 else f"Pet Memorial Tributes — Page {current_page}"
     canonical = SITE_DOMAIN + page_url(current_page)
@@ -301,10 +416,17 @@ def build_archive_full_html(cards_html: str, current_page: int, total_pages: int
     archive_template = load_template("archive.html")
 
     # Build head meta
+    archive_schema_json = build_archive_schema(SITE_DOMAIN, tribute_entries)
+    archive_schema_block = f"""
+  <script type="application/ld+json">
+{archive_schema_json}
+  </script>
+""".strip()
     head_meta = f"""
   <title>{escape_html(title)}</title>
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="{canonical}">
+  {archive_schema_block}
 """.strip()
 
     # Inject cards + pagination into archive template
@@ -356,7 +478,7 @@ def rebuild_archive_pages(entries):
             cards_html += build_card_html(entry)
 
         # Build full archive page via template system
-        final_html = build_archive_full_html(cards_html, page_num, total_pages)
+        final_html = build_archive_full_html(cards_html, page_num, total_pages, page_entries)
 
         # Determine path
         if page_num == 1:
@@ -368,6 +490,34 @@ def rebuild_archive_pages(entries):
 
         with open(page_path, "w", encoding="utf-8") as f:
             f.write(final_html)
+
+
+def generate_sitemap(data: list[dict]):
+    sitemap_path = os.path.join(TRIBUTES_DIR, "sitemap.xml")
+
+    urls = []
+    for item in data:
+        slug = (item.get("slug") or "").strip()
+        if not slug:
+            continue
+        loc = f"{SITE_DOMAIN}{get_entry_web_base(item)}"
+        urls.append(
+            f"""
+  <url>
+    <loc>{escape_html(loc)}</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>"""
+        )
+
+    sitemap_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+{''.join(urls)}
+</urlset>
+"""
+
+    with open(sitemap_path, "w", encoding="utf-8") as f:
+        f.write(sitemap_content)
 
 
 
@@ -436,6 +586,7 @@ def migrate_existing_folders_to_json():
 
     save_data(entries)
     rebuild_archive_pages(entries)
+    generate_sitemap(entries)
 
 
 def build_tribute_html(
@@ -458,24 +609,35 @@ def build_tribute_html(
     # ----- Title / subtitle logic -----
     breed_clean = (breed or "").strip()
     pet_type_clean = (pet_type or "").strip()
+    pet_type_title = pet_type_clean if pet_type_clean else "Pet"
+    pet_type_lower = pet_type_title.lower()
+
     if breed_clean:
-        subtitle = f"{breed_clean} Memorial Tribute"
-        title = f"{pet_name} – {subtitle} | Melton Memorials"
-        og_desc = excerpt or f"Read the memorial tribute honoring {pet_name}."
-    elif pet_type_clean:
-        subtitle = f"{pet_type_clean} Memorial Tribute"
-        title = f"{pet_name} – {subtitle} | Melton Memorials"
-        og_desc = excerpt or f"Read the memorial tribute honoring {pet_name}."
+        subtitle = f"{breed_clean} {pet_type_title} Memorial Tribute"
     else:
-        subtitle = "Pet Memorial Tribute"
-        title = f"{pet_name} – Pet Memorial Tribute | Melton Memorials"
-        og_desc = excerpt or f"Read the memorial tribute honoring {pet_name}."
+        subtitle = f"{pet_type_title} Memorial Tribute"
+
+    title = f"{pet_name} {pet_type_title} Memorial Tribute | Melton Memorials"
 
     years_pretty = normalize_dates_text(years_pretty)
     plain_message = re.sub(r"<[^>]+>", " ", tribute_message_html or "")
     plain_message = re.sub(r"\s+", " ", plain_message).strip()
-    og_description = plain_message[:160] if plain_message else (excerpt or f"A memorial tribute honoring {pet_name}.")
-    meta_desc = og_description
+    clean_message = re.sub(r"[^\x00-\x7F]+", "", plain_message)
+    clean_message = re.sub(r"\s+\.", ".", clean_message)
+    clean_message = re.sub(r"\s{2,}", " ", clean_message).strip()
+    og_description = excerpt or f"Read the memorial tribute for {pet_name}, a beloved {pet_type_lower}, honored with a handcrafted memorial stone."
+    descriptor = f"{breed_clean + ' ' if breed_clean else ''}{pet_type_lower}".strip()
+    descriptor = re.sub(r"\s+", " ", descriptor)
+    tribute_preview = clean_meta_preview(clean_message or excerpt, max_chars=120)
+    meta_description = (
+        f"Read the memorial tribute for {pet_name}, "
+        f"a beloved {descriptor} "
+        f"honored with a handcrafted memorial stone by Melton Memorials."
+    )
+    if tribute_preview:
+        meta_description = f"{meta_description} {tribute_preview}..."
+    structured_meta = meta_description
+    og_description = structured_meta
 
     submitter_parts = [p for p in [first_name.strip(), state.strip()] if p]
     submitter_line = ", ".join(submitter_parts)
@@ -493,12 +655,11 @@ def build_tribute_html(
         image_path = f"/pet-tributes/assets/{image_filename}"
         og_image = f"{SITE_DOMAIN}/pet-tributes/assets/{image_filename}"
 
-    if user_uploaded_image:
-        image_class = ""
-    else:
-        image_class = "mm-placeholder"
     second_image_filename = (second_image_filename or "").strip()
-    image_alt = f"{pet_name} {pet_type_clean} memorial portrait".strip() if pet_type_clean else f"{pet_name} memorial portrait"
+    if breed_clean:
+        image_alt = f"Memorial stone for {pet_name}, beloved {breed_clean} {pet_type_lower}"
+    else:
+        image_alt = f"Memorial stone for {pet_name}, beloved {pet_type_lower}"
     image_2_block = ""
     if second_image_filename:
         image_2_block = (
@@ -508,7 +669,7 @@ def build_tribute_html(
         )
     dates_block = f"<p>{escape_html(years_pretty)}</p>" if years_pretty.strip() else ""
     shared_block = f"<p>Shared by {escape_html(submitter_line)}</p>" if submitter_line else ""
-    share_description = og_description.strip() if (og_description or "").strip() else f"Memorial tribute for {pet_name}"
+    share_description = structured_meta.strip() if (structured_meta or "").strip() else f"Memorial tribute for {pet_name}"
     share_subject = f"{pet_name} Memorial Tribute"
     share_body = f"{share_description}\n\n{page_url}"
     share_body_with_image = share_body + (f"\n\nImage: {og_image}" if og_image else "")
@@ -524,19 +685,46 @@ def build_tribute_html(
         f"&body={escape_url(share_body_with_image)}"
     )
 
+    canonical_url = page_url
+    full_image_url = og_image
+    publish_date = publish_date_iso
+    meta_description = structured_meta
+    schema_data = {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": title,
+        "description": meta_description,
+        "image": full_image_url,
+        "author": {
+            "@type": "Organization",
+            "name": "Melton Memorials",
+        },
+        "publisher": {
+            "@type": "Organization",
+            "name": "Melton Memorials",
+        },
+        "datePublished": publish_date,
+        "mainEntityOfPage": canonical_url,
+    }
+    schema_json = json.dumps(schema_data, ensure_ascii=False)
+
     # ----- Load base template -----
     base = load_template("base.html")
 
     # ----- Build head meta -----
     head_meta = f"""
   <title>{escape_html(title)}</title>
-  <meta name="description" content="{escape_html(meta_desc)}">
+  <meta name="description" content="{escape_html(structured_meta)}">
   <link rel="canonical" href="{page_url}">
+  <link rel="icon" type="image/x-icon" href="/pet-tributes/assets/favicon.ico">
   <meta name="robots" content="index, follow">
   <meta name="date" content="{publish_date_iso}">
   <meta name="twitter:title" content="{escape_html(title)}">
-  <meta name="twitter:description" content="{escape_html(og_description)}">
+  <meta name="twitter:description" content="{escape_html(structured_meta)}">
   <meta name="twitter:image" content="{og_image}">
+  <script type="application/ld+json">
+{schema_json}
+  </script>
 """.strip()
 
     # ----- Load tribute content template -----
@@ -546,7 +734,6 @@ def build_tribute_html(
     content = content.replace("{{BREED_LINE}}", escape_html(breed_line))
     content = content.replace("{{IMAGE_PATH}}", image_path)
     content = content.replace("{{IMAGE_ALT}}", escape_html(image_alt))
-    content = content.replace("{{IMAGE_CLASS}}", image_class)
     content = content.replace("{{IMAGE_2_BLOCK}}", image_2_block)
     content = content.replace("{{DATES_BLOCK}}", dates_block)
     content = content.replace("{{SHARED_BLOCK}}", shared_block)
@@ -564,7 +751,7 @@ def build_tribute_html(
     # ----- Assemble final page -----
     final_html = base.replace("{{HEAD_META}}", head_meta)
     final_html = final_html.replace("{{OG_TITLE}}", escape_html(title))
-    final_html = final_html.replace("{{OG_DESCRIPTION}}", escape_html(og_description))
+    final_html = final_html.replace("{{OG_DESCRIPTION}}", escape_html(structured_meta))
     final_html = final_html.replace("{{CANONICAL_URL}}", page_url)
     final_html = final_html.replace("{{OG_IMAGE}}", og_image)
     final_html = final_html.replace("{{PUBLISHED_TIME}}", publish_date_iso)
@@ -574,6 +761,71 @@ def build_tribute_html(
 
     return final_html
 
+
+
+def rebuild_single_tribute_page(entry: dict):
+    slug = (entry.get("slug") or "").strip()
+    if not slug:
+        return
+
+    tribute_folder = find_tribute_folder(slug, entry.get("folder", ""))
+    safe_mkdir(tribute_folder)
+    index_path = os.path.join(tribute_folder, "index.html")
+
+    # Preserve existing tribute body text when editing metadata/images.
+    tribute_message_html = ""
+    if os.path.exists(index_path):
+        try:
+            with open(index_path, "r", encoding="utf-8") as f:
+                existing_html = f.read()
+            msg_match = re.search(
+                r'<div class="mm-tribute-message mm-tribute-message-centered">\s*(.*?)\s*</div>',
+                existing_html,
+                flags=re.S,
+            )
+            if msg_match:
+                tribute_message_html = (msg_match.group(1) or "").strip()
+        except Exception:
+            tribute_message_html = ""
+
+    if not tribute_message_html:
+        fallback_excerpt = (entry.get("excerpt") or "").strip()
+        tribute_message_html = f"<p>{escape_html(fallback_excerpt)}</p>" if fallback_excerpt else "<p></p>"
+
+    tribute_web_path = get_entry_web_base(entry)
+    image_filename = (entry.get("image_filename") or "").strip()
+    is_placeholder_image = (
+        (not image_filename)
+        or image_filename == "blank_memorial_loving_memory.png"
+        or image_filename == f"{slug}.png"
+        or image_filename.endswith("-memorial-stone.png")
+        or image_filename.endswith("-memorial-stone.webp")
+    )
+    if image_filename and not is_placeholder_image:
+        og_image_abs = f"{SITE_DOMAIN}{tribute_web_path}{image_filename}"
+    else:
+        og_image_abs = f"{SITE_DOMAIN}/pet-tributes/assets/blank_memorial_loving_memory.png"
+
+    page_url = f"{SITE_DOMAIN}{tribute_web_path}"
+    tribute_html = build_tribute_html(
+        pet_name=entry.get("pet_name", ""),
+        first_name=entry.get("first_name", ""),
+        state=entry.get("state", ""),
+        breed=entry.get("breed", ""),
+        pet_type=entry.get("pet_type", ""),
+        years_pretty=entry.get("years_pretty", ""),
+        excerpt=entry.get("excerpt", ""),
+        page_url=page_url,
+        tribute_web_path=tribute_web_path,
+        og_image_abs=og_image_abs,
+        user_uploaded_image=not is_placeholder_image,
+        second_image_filename=entry.get("image2_filename", ""),
+        publish_date_iso=(entry.get("published_iso") or datetime.now().strftime("%Y-%m-%d")),
+        tribute_message_html=tribute_message_html,
+    )
+
+    with open(index_path, "w", encoding="utf-8") as f:
+        f.write(tribute_html)
 
 
 def escape_html(s: str) -> str:
@@ -669,6 +921,10 @@ class TributePublisherApp:
         self.state = tk.Entry(create_frame, width=44)
         self.state.grid(row=10, column=1, sticky="w", **pad)
 
+        tk.Label(create_frame, text="Email (optional)").grid(row=11, column=0, sticky="w", **pad)
+        self.email = tk.Entry(create_frame, width=44)
+        self.email.grid(row=11, column=1, sticky="w", **pad)
+
         tk.Label(create_frame, text="Breed (optional)").grid(row=4, column=0, sticky="w", **pad)
         self.breed = tk.Entry(create_frame, width=44)
         self.breed.grid(row=4, column=1, sticky="w", **pad)
@@ -709,13 +965,13 @@ class TributePublisherApp:
         self.btn_generate = tk.Button(
             create_frame, text="Generate Tribute Files", command=self.generate, height=2, width=26
         )
-        self.btn_generate.grid(row=11, column=1, sticky="w", padx=10, pady=14)
+        self.btn_generate.grid(row=12, column=1, sticky="w", padx=10, pady=14)
 
         tk.Label(
             create_frame,
             text=f"Output: {TRIBUTES_DIR}\nArchive: {ARCHIVE_INDEX}",
             fg="#444"
-        ).grid(row=12, column=0, columnspan=2, sticky="w", padx=10, pady=6)
+        ).grid(row=13, column=0, columnspan=2, sticky="w", padx=10, pady=6)
 
         # Force tab flow to match the visible top-to-bottom form layout.
         self._apply_create_form_tab_order([
@@ -730,6 +986,7 @@ class TributePublisherApp:
             self.btn_clear_image2,
             self.first_name,
             self.state,
+            self.email,
             self.btn_generate,
         ])
 
@@ -853,16 +1110,128 @@ class TributePublisherApp:
             ("Image 2 Filename", "image2_filename"),
             ("First Name", "first_name"),
             ("State", "state"),
+            ("Email", "email"),
         ]
         widgets = {}
 
+        image_keys = {"image_filename", "image2_filename"}
+        selected_uploads = {"image_filename": "", "image2_filename": ""}
+
+        def choose_image_for_field(field_key: str):
+            path = filedialog.askopenfilename(
+                title="Select replacement image",
+                filetypes=[("Images", "*.jpg *.jpeg *.png *.webp *.heic *.bmp"), ("All files", "*.*")]
+            )
+            if not path:
+                return
+            field_widget = widgets.get(field_key)
+            if field_widget is None:
+                return
+            selected_uploads[field_key] = path
+            field_widget.delete(0, "end")
+            field_widget.insert(0, os.path.basename(path))
+
+        def clear_image_field(field_key: str):
+            field_widget = widgets.get(field_key)
+            if field_widget is None:
+                return
+            selected_uploads[field_key] = ""
+            field_widget.delete(0, "end")
+
         for label, key in fields:
             tk.Label(dialog, text=label).grid(row=row, column=0, sticky="w", **pad)
-            widget = tk.Entry(dialog, width=48)
-            widget.insert(0, str(entry.get(key, "") or ""))
-            widget.grid(row=row, column=1, sticky="w", **pad)
-            widgets[key] = widget
+            if key in image_keys:
+                row_frame = tk.Frame(dialog)
+                row_frame.grid(row=row, column=1, sticky="w", **pad)
+
+                widget = tk.Entry(row_frame, width=34)
+                widget.insert(0, str(entry.get(key, "") or ""))
+                widget.pack(side="left")
+                widgets[key] = widget
+
+                tk.Button(
+                    row_frame,
+                    text="Upload…",
+                    command=lambda current_key=key: choose_image_for_field(current_key),
+                ).pack(side="left", padx=6)
+                tk.Button(
+                    row_frame,
+                    text="Clear",
+                    command=lambda current_key=key: clear_image_field(current_key),
+                ).pack(side="left")
+            else:
+                widget = tk.Entry(dialog, width=48)
+                widget.insert(0, str(entry.get(key, "") or ""))
+                widget.grid(row=row, column=1, sticky="w", **pad)
+                widgets[key] = widget
             row += 1
+
+        def resolve_image_field(field_key: str, output_filename: str, label: str):
+            value = widgets[field_key].get().strip()
+            chosen_upload = (selected_uploads.get(field_key) or "").strip()
+
+            # Explicit upload choice always wins for this field.
+            # This prevents Image 2 from ever being inferred from Image 1.
+            if chosen_upload:
+                if not os.path.isfile(chosen_upload):
+                    messagebox.showerror("Validation", f"{label} upload not found:\n{chosen_upload}")
+                    return None
+                if not ensure_pillow():
+                    messagebox.showerror(
+                        "Pillow not installed",
+                        "Image conversion requires Pillow.\n\nRun:\n  py -m pip install pillow"
+                    )
+                    return None
+                tribute_folder = find_tribute_folder(slug, entry.get("folder", ""))
+                safe_mkdir(tribute_folder)
+                output_path = os.path.join(tribute_folder, output_filename)
+                try:
+                    info = convert_to_webp_normalized(
+                        chosen_upload,
+                        output_path,
+                        max_width=MAX_IMAGE_WIDTH,
+                        quality=WEBP_QUALITY,
+                    )
+                    print(f"[edit-{field_key}] {info}")
+                except Exception as e:
+                    messagebox.showerror("Image conversion failed", f"Could not convert {label}:\n{e}")
+                    return None
+                return output_filename
+
+            if not value:
+                return ""
+
+            # If user selected a local file, convert it and store the normalized tribute filename.
+            if os.path.isfile(value):
+                if not ensure_pillow():
+                    messagebox.showerror(
+                        "Pillow not installed",
+                        "Image conversion requires Pillow.\n\nRun:\n  py -m pip install pillow"
+                    )
+                    return None
+
+                tribute_folder = find_tribute_folder(slug, entry.get("folder", ""))
+                safe_mkdir(tribute_folder)
+                output_path = os.path.join(tribute_folder, output_filename)
+                try:
+                    info = convert_to_webp_normalized(
+                        value,
+                        output_path,
+                        max_width=MAX_IMAGE_WIDTH,
+                        quality=WEBP_QUALITY,
+                    )
+                    print(f"[edit-{field_key}] {info}")
+                except Exception as e:
+                    messagebox.showerror("Image conversion failed", f"Could not convert {label}:\n{e}")
+                    return None
+                return output_filename
+
+            looks_like_path = ("/" in value) or ("\\" in value) or bool(re.match(r"^[A-Za-z]:", value))
+            if looks_like_path:
+                messagebox.showerror("Validation", f"{label} path not found:\n{value}")
+                return None
+
+            return value
 
         def on_save():
             pet_name = widgets["pet_name"].get().strip()
@@ -878,11 +1247,29 @@ class TributePublisherApp:
                     return
 
             for _, key in fields:
+                if key in image_keys:
+                    continue
                 entry[key] = widgets[key].get().strip()
+
+            image1_filename = resolve_image_field("image_filename", f"{slug}.webp", "Image 1")
+            if image1_filename is None:
+                return
+            if not image1_filename:
+                messagebox.showerror("Validation", "Image Filename is required.")
+                return
+
+            image2_filename = resolve_image_field("image2_filename", f"{slug}-2.webp", "Image 2")
+            if image2_filename is None:
+                return
+
+            entry["image_filename"] = image1_filename
+            entry["image2_filename"] = image2_filename
             entry["years_pretty"] = normalize_dates_text(entry.get("years_pretty", ""))
 
             save_data(tributes)
+            rebuild_single_tribute_page(entry)
             rebuild_archive_pages(tributes)
+            generate_sitemap(tributes)
             self.refresh_tribute_table()
             messagebox.showinfo("Saved", f'Updated tribute "{slug}".')
             dialog.destroy()
@@ -915,6 +1302,7 @@ class TributePublisherApp:
         tributes = [t for t in tributes if t.get("slug") not in slugs]
         save_data(tributes)
         rebuild_archive_pages(tributes)
+        generate_sitemap(tributes)
         self.checked_slugs.clear()
         self.refresh_tribute_table()
 
@@ -947,6 +1335,7 @@ class TributePublisherApp:
         pet_type = self.pet_type.get().strip()
         first_name = self.first_name.get().strip()
         state = self.state.get().strip()
+        email = self.email.get().strip()
         breed = self.breed.get().strip()
         years_raw = self.years.get().strip()
         tribute_msg = self.message.get("1.0", "end").strip()
@@ -957,17 +1346,25 @@ class TributePublisherApp:
 
         years_pretty = normalize_dates_text(years_raw)
 
-        # folder slug rules: pet-name + optional breed + optional extracted years
-        base_parts = [slugify(pet_name)]
-        if breed:
-            base_parts.append(slugify(breed))
+        # Slug rules (new tributes only): pet-name + optional type + optional breed.
+        # If a slug already exists in data.json, append -2, -3, etc.
+        pet_slug = slugify(pet_name)
+        type_slug = slugify(pet_type)
+        breed_slug = slugify(breed)
+        slug_parts = [p for p in [pet_slug, type_slug] if p]
+        if breed_slug:
+            slug_parts.append(breed_slug)
+        base_slug = "-".join(slug_parts).strip("-")
+        if not base_slug:
+            base_slug = pet_slug
 
-        # Try extracting 4-digit years for slug, but don't require them
-        year_matches = re.findall(r"\d{4}", years_pretty)
-        if len(year_matches) >= 2:
-            base_parts.append(f"{year_matches[0]}-{year_matches[1]}")
-
-        folder_slug = "-".join([p for p in base_parts if p])
+        existing_entries = load_data()
+        existing_slugs = {item.get("slug", "") for item in existing_entries if item.get("slug")}
+        folder_slug = base_slug
+        counter = 2
+        while folder_slug in existing_slugs:
+            folder_slug = f"{base_slug}-{counter}"
+            counter += 1
 
         tribute_folder = os.path.join(MEMORIALS_DIR, folder_slug)
         safe_mkdir(tribute_folder)
@@ -993,7 +1390,12 @@ class TributePublisherApp:
             img_dest = os.path.join(tribute_folder, img_filename)
 
             try:
-                info = convert_to_webp_normalized(chosen_image, img_dest, max_width=1200, quality=82)
+                info = convert_to_webp_normalized(
+                    chosen_image,
+                    img_dest,
+                    max_width=MAX_IMAGE_WIDTH,
+                    quality=WEBP_QUALITY,
+                )
                 print(f"[image] {info}")
             except Exception as e:
                 messagebox.showerror("Image conversion failed", f"Could not convert image to .webp:\n{e}")
@@ -1008,12 +1410,12 @@ class TributePublisherApp:
                     f"Default image not found:\n{PLACEHOLDER_IMAGE_FILE}"
                 )
                 return
-            img_filename = f"{folder_slug}.png"
+            img_filename = f"{folder_slug}.webp"
             img_dest = os.path.join(tribute_folder, img_filename)
             try:
-                shutil.copy2(PLACEHOLDER_IMAGE_FILE, img_dest)
+                process_placeholder_image(PLACEHOLDER_IMAGE_FILE, img_dest)
             except Exception as e:
-                messagebox.showerror("Placeholder copy failed", f"Could not prepare fallback image:\n{e}")
+                messagebox.showerror("Placeholder processing failed", f"Could not prepare fallback image:\n{e}")
                 return
             img_abs_url = f"{SITE_DOMAIN}{tribute_web_path}{img_filename}"
 
@@ -1028,7 +1430,12 @@ class TributePublisherApp:
             img2_filename = f"{folder_slug}-2.webp"
             img2_dest = os.path.join(tribute_folder, img2_filename)
             try:
-                info2 = convert_to_webp_normalized(chosen_image2, img2_dest, max_width=1200, quality=82)
+                info2 = convert_to_webp_normalized(
+                    chosen_image2,
+                    img2_dest,
+                    max_width=MAX_IMAGE_WIDTH,
+                    quality=WEBP_QUALITY,
+                )
                 print(f"[image2] {info2}")
             except Exception as e:
                 messagebox.showerror("Image 2 conversion failed", f"Could not convert second image to .webp:\n{e}")
@@ -1037,7 +1444,7 @@ class TributePublisherApp:
         # Build tribute page values
         publish_date_iso = datetime.now().strftime("%Y-%m-%d")
         page_url = f"{SITE_DOMAIN}{tribute_web_path}"
-        excerpt = first_sentence(tribute_msg)
+        excerpt = summarize_excerpt(tribute_msg)
 
         # Convert tribute message into HTML paragraphs
         tribute_message_html = "\n".join(
@@ -1081,7 +1488,7 @@ class TributePublisherApp:
             raise RuntimeError("index.html was not created after write attempt")
 
         # ---- JSON-backed archive update + rebuild ----
-        entries = load_data()
+        entries = existing_entries
 
         published_iso = datetime.now().strftime("%Y-%m-%d")
 
@@ -1099,6 +1506,7 @@ class TributePublisherApp:
             "excerpt": excerpt,
             "first_name": first_name,
             "state": state,
+            "email": email,
             "published_iso": published_iso,
             "image_filename": image_filename,
             "image2_filename": img2_filename,
@@ -1110,6 +1518,7 @@ class TributePublisherApp:
 
         save_data(entries)
         rebuild_archive_pages(entries)
+        generate_sitemap(entries)
         self.refresh_tribute_table()
 
         messagebox.showinfo(

@@ -1,30 +1,30 @@
 [
   {
-    "slug": "princess-buttercup-akita",
-    "pet_name": "Princess Buttercup",
-    "breed": "Akita",
+    "slug": "kira-siberian-husky-2012-2020",
+    "pet_name": "Kira",
+    "breed": "Siberian Husky",
     "pet_type": "Dog",
     "folder": "memorials",
-    "years_pretty": "2024",
-    "excerpt": "test",
-    "first_name": "Rodney",
+    "years_pretty": "2012 - 2020",
+    "excerpt": "You carried your strength quietly - blue eyes, loyal heart, always ready to stand beside me.",
+    "first_name": "Kristen",
     "state": "AR",
     "published_iso": "2026-02-25",
-    "image_filename": "princess-buttercup-akita.png",
+    "image_filename": "kira-siberian-husky-2012-2020.webp",
     "image2_filename": ""
   },
   {
-    "slug": "max-akita",
-    "pet_name": "Max",
-    "breed": "Akita",
+    "slug": "miss-molly-dachshund-2010-2026",
+    "pet_name": "Miss Molly",
+    "breed": "Dachshund",
     "pet_type": "Dog",
     "folder": "memorials",
-    "years_pretty": "2024",
-    "excerpt": "test",
-    "first_name": "Rodney",
+    "years_pretty": "2010 - 2026",
+    "excerpt": "Miss Molly was a rescue. We got her in 2010. Bless her ❤. She became family after just a few short weeks. We sure love and miss her. Thanks to Rodney we have a great headstone for her. Perfect for her.",
+    "first_name": "Dava",
     "state": "AR",
     "published_iso": "2026-02-25",
-    "image_filename": "max-akita.png",
-    "image2_filename": ""
+    "image_filename": "miss-molly-dachshund-2010-2026.webp",
+    "image2_filename": "miss-molly-dachshund-2010-2026-2.webp"
   }
 ]
