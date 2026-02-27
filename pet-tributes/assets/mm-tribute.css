@@ -191,6 +191,14 @@ body {
     line-height: 1.2;
 }
 
+.featured-badge {
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #666;
+    margin-bottom: 6px;
+}
+
 .mm-archive-excerpt {
     font-size: 0.95rem;
     color: #555;
@@ -448,10 +456,9 @@ body {
 
 .mm-tribute-message {
   text-align: left;
-  line-height: 1.8;
-  font-size: 17px;
-  max-width: 680px;
+  max-width: 760px;
   margin: 0 auto;
+  line-height: 1.7;
 }
 
 .mm-tribute-share {
@@ -479,10 +486,6 @@ body {
 
 .mm-share-sep {
   color: #b0b0b0;
-}
-
-.mm-tribute-message-centered {
-  text-align: center;
 }
 
 @media (max-width: 768px) {

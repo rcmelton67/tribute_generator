@@ -11,7 +11,8 @@
     "state": "AR",
     "published_iso": "2026-02-25",
     "image_filename": "kira-siberian-husky-2012-2020.webp",
-    "image2_filename": ""
+    "image2_filename": "",
+    "featured": false
   },
   {
     "slug": "miss-molly-dachshund-2010-2026",
@@ -25,6 +26,39 @@
     "state": "AR",
     "published_iso": "2026-02-25",
     "image_filename": "miss-molly-dachshund-2010-2026.webp",
-    "image2_filename": "miss-molly-dachshund-2010-2026-2.webp"
+    "image2_filename": "miss-molly-dachshund-2010-2026-2.webp",
+    "featured": false
+  },
+  {
+    "slug": "woodland-cat",
+    "pet_name": "Woodland",
+    "breed": "",
+    "pet_type": "Cat",
+    "folder": "memorials",
+    "years_pretty": "",
+    "excerpt": "Woodland was the sweetest kitty ever. she loved to play and loved to cuddle. she would often join me at my desk when i was playing games in my computer. she always followed me around the house and made sure to snuggle...",
+    "first_name": "Kayly",
+    "state": "AR",
+    "email": "",
+    "published_iso": "2026-02-26",
+    "image_filename": "woodland-cat.webp",
+    "image2_filename": "",
+    "featured": false
+  },
+  {
+    "slug": "phoebe-dog-american-akita",
+    "pet_name": "Phoebe",
+    "breed": "American Akita",
+    "pet_type": "Dog",
+    "folder": "memorials",
+    "years_pretty": "2012 - 2022",
+    "excerpt": "Some dogs are companions. Some dogs are protectors. And once in a lifetime, if you are fortunate, you are given one who becomes part of your identity. Phoebe was that dog for us. Phoebe, our American Akita, came home as...",
+    "first_name": "Rodney and Tina",
+    "state": "AR",
+    "email": "rcmelton@icloud.com",
+    "published_iso": "2026-02-26",
+    "image_filename": "phoebe-dog-american-akita.webp",
+    "image2_filename": "phoebe-dog-american-akita-2.webp",
+    "featured": true
   }
 ]

@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 import json
+import html
 import unicodedata
 from datetime import datetime
 import tkinter as tk
@@ -135,6 +136,52 @@ def clean_meta_preview(text: str, max_chars: int = 120) -> str:
     return chunk.rstrip(" ,;:-")
 
 
+def parse_safe_markdown(text: str) -> str:
+    # Escape all HTML first
+    text = html.escape(text or "")
+
+    # Headings
+    text = re.sub(r"^### (.+)$", r"<h3>\1</h3>", text, flags=re.MULTILINE)
+    text = re.sub(r"^## (.+)$", r"<h2>\1</h2>", text, flags=re.MULTILINE)
+
+    # Bold
+    text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
+
+    # Italic
+    text = re.sub(r"\*(.+?)\*", r"<em>\1</em>", text)
+
+    # Paragraph wrapping
+    lines = text.split("\n")
+    wrapped = []
+    for line in lines:
+        if line.strip() == "":
+            continue
+        if line.startswith("<h2>") or line.startswith("<h3>"):
+            wrapped.append(line)
+        else:
+            wrapped.append(f"<p>{line}</p>")
+
+    return "\n".join(wrapped)
+
+
+def strip_markdown_for_excerpt(text: str) -> str:
+    # Escape any HTML first
+    text = html.escape(text or "")
+
+    # Remove headings
+    text = re.sub(r"^### (.+)$", r"\1", text, flags=re.MULTILINE)
+    text = re.sub(r"^## (.+)$", r"\1", text, flags=re.MULTILINE)
+
+    # Remove bold/italic markers
+    text = re.sub(r"\*\*(.+?)\*\*", r"\1", text)
+    text = re.sub(r"\*(.+?)\*", r"\1", text)
+
+    # Collapse whitespace
+    text = re.sub(r"\s+", " ", text).strip()
+
+    return text
+
+
 def normalize_dates_text(value: str) -> str:
     """
     Normalize dates text to avoid mojibake like 'â€“' and keep separators consistent.
@@ -250,7 +297,11 @@ def load_data() -> list[dict]:
         return []
     # Use utf-8-sig so BOM-prefixed JSON files still parse cleanly.
     with open(ARCHIVE_DATA, "r", encoding="utf-8-sig") as f:
-        return json.load(f)
+        items = json.load(f)
+    for item in items:
+        # Missing or non-true values are treated as not featured.
+        item["featured"] = item.get("featured") is True
+    return items
 
 
 def save_data(items: list[dict]):
@@ -260,15 +311,21 @@ def save_data(items: list[dict]):
 
 
 def sort_entries_newest_first(items: list[dict]) -> list[dict]:
-    # Primary sort: published date (newest first).
-    # Tie-breaker: original list position (later/appended entries first),
-    # so multiple tributes created on the same date still show newest first.
-    enumerated = list(enumerate(items))
-    enumerated.sort(
-        key=lambda pair: ((pair[1].get("published_iso", "") or ""), pair[0]),
+    featured = [item for item in items if item.get("featured") is True]
+    others = [item for item in items if item.get("featured") is not True]
+
+    # Keep the newest first for non-featured tributes.
+    # Tie-breaker: original list position (later/appended entries first).
+    enumerated_others = list(enumerate(others))
+    enumerated_others.sort(
+        key=lambda pair: (
+            (pair[1].get("published_iso") or pair[1].get("publish_date") or ""),
+            pair[0],
+        ),
         reverse=True,
     )
-    return [item for _, item in enumerated]
+    others_sorted = [item for _, item in enumerated_others]
+    return featured + others_sorted
 
 
 def build_card_html(entry: dict) -> str:
@@ -276,7 +333,7 @@ def build_card_html(entry: dict) -> str:
     breed = entry.get("breed", "")
     pet_type = (entry.get("pet_type") or "").strip()
     years_pretty = normalize_dates_text(entry.get("years_pretty", ""))
-    excerpt = entry.get("excerpt", "")
+    excerpt = strip_markdown_for_excerpt(entry.get("excerpt", ""))
     slug = entry.get("slug", "")
     image_filename = entry.get("image_filename", "")
     publish_label = ""
@@ -286,6 +343,7 @@ def build_card_html(entry: dict) -> str:
     first_name = (entry.get("first_name") or "").strip()
     state = (entry.get("state") or "").strip()
     email = (entry.get("email") or "").strip()
+    featured = entry.get("featured") is True
 
     attribution_html = ""
     if first_name or state:
@@ -294,7 +352,7 @@ def build_card_html(entry: dict) -> str:
 
     subtitle_for_card = ""
     if breed and pet_type:
-        subtitle_for_card = f"{breed} {pet_type}"
+        subtitle_for_card = f"{breed} - {pet_type}"
     elif breed:
         subtitle_for_card = breed
     elif pet_type:
@@ -322,6 +380,7 @@ def build_card_html(entry: dict) -> str:
         "</div>"
         if excerpt else ""
     )
+    featured_badge_html = '<div class="featured-badge">Featured Tribute</div>' if featured else ""
 
     return f"""
 <article class="mm-archive-card"
@@ -340,6 +399,7 @@ def build_card_html(entry: dict) -> str:
       <img src="{card_img_src}" alt="{escape_html(pet_name)} memorial tribute" loading="lazy">
     </div>
     <div class="mm-archive-meta">
+      {featured_badge_html}
       <h2 class="mm-archive-title">{title_line}</h2>
       <p class="mm-archive-excerpt">{escape_html(excerpt)}</p>
       {card_more_html}
@@ -452,7 +512,7 @@ def build_archive_full_html(cards_html: str, current_page: int, total_pages: int
 def rebuild_archive_pages(entries):
     from math import ceil
 
-    # Sort newest first (with same-day tie-breaker handled in helper)
+    # Featured tributes are pinned first; remaining tributes are newest-first.
     entries = sort_entries_newest_first(entries)
 
     total_pages = ceil(len(entries) / CARDS_PER_PAGE)
@@ -581,7 +641,8 @@ def migrate_existing_folders_to_json():
             "first_name": first_name,
             "state": state,
             "published_iso": "2026-02-01",
-            "image_filename": image_filename
+            "image_filename": image_filename,
+            "featured": False,
         })
 
     save_data(entries)
@@ -791,7 +852,7 @@ def build_tribute_html(
 
 
 
-def rebuild_single_tribute_page(entry: dict):
+def rebuild_single_tribute_page(entry: dict, tribute_message_override: str = ""):
     slug = (entry.get("slug") or "").strip()
     if not slug:
         return
@@ -800,14 +861,17 @@ def rebuild_single_tribute_page(entry: dict):
     safe_mkdir(tribute_folder)
     index_path = os.path.join(tribute_folder, "index.html")
 
-    # Preserve existing tribute body text when editing metadata/images.
+    # Preserve existing tribute body text when editing metadata/images unless explicit override provided.
     tribute_message_html = ""
-    if os.path.exists(index_path):
+    override_text = (tribute_message_override or "").strip()
+    if override_text:
+        tribute_message_html = parse_safe_markdown(override_text)
+    elif os.path.exists(index_path):
         try:
             with open(index_path, "r", encoding="utf-8") as f:
                 existing_html = f.read()
             msg_match = re.search(
-                r'<div class="mm-tribute-message mm-tribute-message-centered">\s*(.*?)\s*</div>',
+                r'<div class="mm-tribute-message(?:\s+mm-tribute-message-centered)?"(?:\s+style="[^"]*")?\s*>\s*(.*?)\s*</div>',
                 existing_html,
                 flags=re.S,
             )
@@ -854,6 +918,26 @@ def rebuild_single_tribute_page(entry: dict):
 
     with open(index_path, "w", encoding="utf-8") as f:
         f.write(tribute_html)
+
+
+def tribute_message_html_to_text(message_html: str) -> str:
+    """Convert stored tribute message HTML back to plain editable text with paragraph spacing."""
+    source = message_html or ""
+    paragraph_matches = re.findall(r"<p[^>]*>(.*?)</p>", source, flags=re.S | re.I)
+    if paragraph_matches:
+        parts = []
+        for p in paragraph_matches:
+            plain = re.sub(r"<[^>]+>", "", p)
+            plain = html.unescape(plain).strip()
+            if plain:
+                parts.append(plain)
+        if parts:
+            return "\n\n".join(parts)
+
+    fallback = re.sub(r"<[^>]+>", " ", source)
+    fallback = html.unescape(fallback)
+    fallback = re.sub(r"\s+", " ", fallback).strip()
+    return fallback
 
 
 def escape_html(s: str) -> str:
@@ -913,6 +997,8 @@ class TributePublisherApp:
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title("Melton Memorials — Tribute Publisher")
+        self.root.geometry("1380x920")
+        self.root.minsize(1220, 760)
 
         self.image_path = tk.StringVar(value="")
         self.image2_path = tk.StringVar(value="")
@@ -961,9 +1047,29 @@ class TributePublisherApp:
         self.years = tk.Entry(create_frame, width=44)
         self.years.grid(row=5, column=1, sticky="w", **pad)
 
+        self.formatting_guide_text = (
+            "Formatting Guide:\n"
+            "Use ## Heading Text for section headings.\n"
+            "Use ### Heading Text for smaller headings.\n"
+            "Use **bold text** for bold.\n"
+            "Use *italic text* for italic.\n"
+            "Keep formatting minimal for best results."
+        )
+
         tk.Label(create_frame, text="Tribute Message *").grid(row=6, column=0, sticky="nw", **pad)
-        self.message = tk.Text(create_frame, width=44, height=8)
-        self.message.grid(row=6, column=1, sticky="w", **pad)
+        message_frame = tk.Frame(create_frame)
+        message_frame.grid(row=6, column=1, sticky="w", **pad)
+        self.message = tk.Text(message_frame, width=62, height=10)
+        self.message.pack(anchor="w")
+        self.message_guide = tk.Label(
+            create_frame,
+            text=self.formatting_guide_text,
+            justify="left",
+            fg="#666",
+            font=("TkDefaultFont", 8),
+            wraplength=300,
+        )
+        self.message_guide.grid(row=6, column=2, sticky="nw", padx=(8, 10), pady=6)
 
         tk.Label(create_frame, text="Photo 1 (optional, recommended)").grid(row=7, column=0, sticky="w", **pad)
 
@@ -1115,10 +1221,32 @@ class TributePublisherApp:
             messagebox.showerror("Not Found", f'Could not find tribute "{slug}" in data.json.')
             return
 
+        # Load full tribute body text (not just card excerpt) for editing.
+        full_tribute_message = ""
+        try:
+            tribute_folder = find_tribute_folder(slug, entry.get("folder", ""))
+            index_path = os.path.join(tribute_folder, "index.html")
+            if os.path.exists(index_path):
+                with open(index_path, "r", encoding="utf-8") as f:
+                    existing_html = f.read()
+                msg_match = re.search(
+                    r'<div class="mm-tribute-message(?:\s+mm-tribute-message-centered)?"(?:\s+style="[^"]*")?\s*>\s*(.*?)\s*</div>',
+                    existing_html,
+                    flags=re.S,
+                )
+                if msg_match:
+                    full_tribute_message = tribute_message_html_to_text((msg_match.group(1) or "").strip())
+        except Exception:
+            full_tribute_message = ""
+        if not full_tribute_message:
+            full_tribute_message = (entry.get("excerpt") or "").strip()
+
         dialog = tk.Toplevel(self.root)
         dialog.title(f"Edit Tribute — {slug}")
         dialog.transient(self.root)
         dialog.grab_set()
+        dialog.geometry("1240x820")
+        dialog.minsize(1120, 740)
 
         pad = {"padx": 10, "pady": 6}
         row = 0
@@ -1127,23 +1255,10 @@ class TributePublisherApp:
         tk.Label(dialog, text=slug, fg="#444").grid(row=row, column=1, sticky="w", **pad)
         row += 1
 
-        fields = [
-            ("Pet Name *", "pet_name"),
-            ("Pet Type", "pet_type"),
-            ("Breed", "breed"),
-            ("Dates of Life", "years_pretty"),
-            ("Excerpt", "excerpt"),
-            ("Published (YYYY-MM-DD)", "published_iso"),
-            ("Image Filename", "image_filename"),
-            ("Image 2 Filename", "image2_filename"),
-            ("First Name", "first_name"),
-            ("State", "state"),
-            ("Email", "email"),
-        ]
         widgets = {}
-
-        image_keys = {"image_filename", "image2_filename"}
         selected_uploads = {"image_filename": "", "image2_filename": ""}
+        image1_display = tk.StringVar(value=(entry.get("image_filename") or ""))
+        image2_display = tk.StringVar(value=(entry.get("image2_filename") or ""))
 
         def choose_image_for_field(field_key: str):
             path = filedialog.askopenfilename(
@@ -1152,50 +1267,95 @@ class TributePublisherApp:
             )
             if not path:
                 return
-            field_widget = widgets.get(field_key)
-            if field_widget is None:
-                return
             selected_uploads[field_key] = path
-            field_widget.delete(0, "end")
-            field_widget.insert(0, os.path.basename(path))
+            if field_key == "image_filename":
+                image1_display.set(os.path.basename(path))
+            elif field_key == "image2_filename":
+                image2_display.set(os.path.basename(path))
 
         def clear_image_field(field_key: str):
-            field_widget = widgets.get(field_key)
-            if field_widget is None:
-                return
             selected_uploads[field_key] = ""
-            field_widget.delete(0, "end")
+            if field_key == "image_filename":
+                image1_display.set("")
+            elif field_key == "image2_filename":
+                image2_display.set("")
 
-        for label, key in fields:
-            tk.Label(dialog, text=label).grid(row=row, column=0, sticky="w", **pad)
-            if key in image_keys:
-                row_frame = tk.Frame(dialog)
-                row_frame.grid(row=row, column=1, sticky="w", **pad)
+        tk.Label(dialog, text="Pet Name *").grid(row=row, column=0, sticky="w", **pad)
+        widgets["pet_name"] = tk.Entry(dialog, width=48)
+        widgets["pet_name"].insert(0, str(entry.get("pet_name", "") or ""))
+        widgets["pet_name"].grid(row=row, column=1, sticky="w", **pad)
+        row += 1
 
-                widget = tk.Entry(row_frame, width=34)
-                widget.insert(0, str(entry.get(key, "") or ""))
-                widget.pack(side="left")
-                widgets[key] = widget
+        tk.Label(dialog, text="Pet Type (optional)").grid(row=row, column=0, sticky="w", **pad)
+        widgets["pet_type"] = tk.Entry(dialog, width=48)
+        widgets["pet_type"].insert(0, str(entry.get("pet_type", "") or ""))
+        widgets["pet_type"].grid(row=row, column=1, sticky="w", **pad)
+        row += 1
 
-                tk.Button(
-                    row_frame,
-                    text="Upload…",
-                    command=lambda current_key=key: choose_image_for_field(current_key),
-                ).pack(side="left", padx=6)
-                tk.Button(
-                    row_frame,
-                    text="Clear",
-                    command=lambda current_key=key: clear_image_field(current_key),
-                ).pack(side="left")
-            else:
-                widget = tk.Entry(dialog, width=48)
-                widget.insert(0, str(entry.get(key, "") or ""))
-                widget.grid(row=row, column=1, sticky="w", **pad)
-                widgets[key] = widget
-            row += 1
+        tk.Label(dialog, text="Breed (optional)").grid(row=row, column=0, sticky="w", **pad)
+        widgets["breed"] = tk.Entry(dialog, width=48)
+        widgets["breed"].insert(0, str(entry.get("breed", "") or ""))
+        widgets["breed"].grid(row=row, column=1, sticky="w", **pad)
+        row += 1
+
+        tk.Label(dialog, text="Dates of Life (optional, any format)").grid(row=row, column=0, sticky="w", **pad)
+        widgets["years_pretty"] = tk.Entry(dialog, width=48)
+        widgets["years_pretty"].insert(0, str(entry.get("years_pretty", "") or ""))
+        widgets["years_pretty"].grid(row=row, column=1, sticky="w", **pad)
+        row += 1
+
+        tk.Label(dialog, text="Tribute Message *").grid(row=row, column=0, sticky="nw", **pad)
+        text_frame = tk.Frame(dialog)
+        text_frame.grid(row=row, column=1, sticky="w", **pad)
+        widgets["excerpt"] = tk.Text(text_frame, width=62, height=12, wrap="word")
+        widgets["excerpt"].pack(anchor="w")
+        widgets["excerpt"].insert("1.0", full_tribute_message)
+        tk.Label(
+            dialog,
+            text=self.formatting_guide_text,
+            justify="left",
+            fg="#666",
+            font=("TkDefaultFont", 8),
+            wraplength=300,
+        ).grid(row=row, column=2, sticky="nw", padx=(8, 10), pady=6)
+        row += 1
+
+        tk.Label(dialog, text="Photo 1 (optional, recommended)").grid(row=row, column=0, sticky="w", **pad)
+        img_row = tk.Frame(dialog)
+        img_row.grid(row=row, column=1, sticky="w", **pad)
+        tk.Label(img_row, textvariable=image1_display, width=34, anchor="w").pack(side="left")
+        tk.Button(img_row, text="Choose…", command=lambda: choose_image_for_field("image_filename")).pack(side="left", padx=6)
+        tk.Button(img_row, text="Clear", command=lambda: clear_image_field("image_filename")).pack(side="left")
+        row += 1
+
+        tk.Label(dialog, text="Photo 2 (optional)").grid(row=row, column=0, sticky="w", **pad)
+        img2_row = tk.Frame(dialog)
+        img2_row.grid(row=row, column=1, sticky="w", **pad)
+        tk.Label(img2_row, textvariable=image2_display, width=34, anchor="w").pack(side="left")
+        tk.Button(img2_row, text="Choose…", command=lambda: choose_image_for_field("image2_filename")).pack(side="left", padx=6)
+        tk.Button(img2_row, text="Clear", command=lambda: clear_image_field("image2_filename")).pack(side="left")
+        row += 1
+
+        tk.Label(dialog, text="First Name (optional)").grid(row=row, column=0, sticky="w", **pad)
+        widgets["first_name"] = tk.Entry(dialog, width=48)
+        widgets["first_name"].insert(0, str(entry.get("first_name", "") or ""))
+        widgets["first_name"].grid(row=row, column=1, sticky="w", **pad)
+        row += 1
+
+        tk.Label(dialog, text="State (optional)").grid(row=row, column=0, sticky="w", **pad)
+        widgets["state"] = tk.Entry(dialog, width=48)
+        widgets["state"].insert(0, str(entry.get("state", "") or ""))
+        widgets["state"].grid(row=row, column=1, sticky="w", **pad)
+        row += 1
+
+        tk.Label(dialog, text="Email (optional)").grid(row=row, column=0, sticky="w", **pad)
+        widgets["email"] = tk.Entry(dialog, width=48)
+        widgets["email"].insert(0, str(entry.get("email", "") or ""))
+        widgets["email"].grid(row=row, column=1, sticky="w", **pad)
+        row += 1
 
         def resolve_image_field(field_key: str, output_filename: str, label: str):
-            value = widgets[field_key].get().strip()
+            value = image1_display.get().strip() if field_key == "image_filename" else image2_display.get().strip()
             chosen_upload = (selected_uploads.get(field_key) or "").strip()
 
             # Explicit upload choice always wins for this field.
@@ -1263,21 +1423,22 @@ class TributePublisherApp:
 
         def on_save():
             pet_name = widgets["pet_name"].get().strip()
-            published_iso = widgets["published_iso"].get().strip()
+            edited_tribute_message = widgets["excerpt"].get("1.0", "end").strip()
             if not pet_name:
                 messagebox.showerror("Validation", "Pet Name is required.")
                 return
-            if published_iso:
-                try:
-                    datetime.strptime(published_iso, "%Y-%m-%d")
-                except ValueError:
-                    messagebox.showerror("Validation", "Published date must be YYYY-MM-DD.")
-                    return
+            if not edited_tribute_message:
+                messagebox.showerror("Validation", "Tribute Message is required.")
+                return
 
-            for _, key in fields:
-                if key in image_keys:
-                    continue
-                entry[key] = widgets[key].get().strip()
+            entry["pet_name"] = pet_name
+            entry["pet_type"] = widgets["pet_type"].get().strip()
+            entry["breed"] = widgets["breed"].get().strip()
+            entry["years_pretty"] = widgets["years_pretty"].get().strip()
+            entry["first_name"] = widgets["first_name"].get().strip()
+            entry["state"] = widgets["state"].get().strip()
+            entry["email"] = widgets["email"].get().strip()
+            entry["excerpt"] = summarize_excerpt(strip_markdown_for_excerpt(edited_tribute_message))
 
             image1_filename = resolve_image_field("image_filename", f"{slug}.webp", "Image 1")
             if image1_filename is None:
@@ -1295,7 +1456,7 @@ class TributePublisherApp:
             entry["years_pretty"] = normalize_dates_text(entry.get("years_pretty", ""))
 
             save_data(tributes)
-            rebuild_single_tribute_page(entry)
+            rebuild_single_tribute_page(entry, tribute_message_override=edited_tribute_message)
             rebuild_archive_pages(tributes)
             generate_sitemap(tributes)
             self.refresh_tribute_table()
@@ -1303,7 +1464,7 @@ class TributePublisherApp:
             dialog.destroy()
 
         btn_row = ttk.Frame(dialog)
-        btn_row.grid(row=row, column=0, columnspan=2, sticky="e", padx=10, pady=(8, 10))
+        btn_row.grid(row=row, column=0, columnspan=3, sticky="e", padx=10, pady=(8, 10))
         ttk.Button(btn_row, text="Cancel", command=dialog.destroy).pack(side="right")
         ttk.Button(btn_row, text="Save Changes", command=on_save).pack(side="right", padx=(0, 8))
 
@@ -1472,14 +1633,10 @@ class TributePublisherApp:
         # Build tribute page values
         publish_date_iso = datetime.now().strftime("%Y-%m-%d")
         page_url = f"{SITE_DOMAIN}{tribute_web_path}"
-        excerpt = summarize_excerpt(tribute_msg)
+        excerpt = summarize_excerpt(strip_markdown_for_excerpt(tribute_msg))
 
-        # Convert tribute message into HTML paragraphs
-        tribute_message_html = "\n".join(
-            f"<p>{escape_html(p.strip())}</p>"
-            for p in re.split(r"\n\s*\n", tribute_msg)
-            if p.strip()
-        )
+        # Convert limited markdown into safe HTML.
+        tribute_message_html = parse_safe_markdown(tribute_msg)
 
         tribute_html = build_tribute_html(
             pet_name=pet_name,
@@ -1538,6 +1695,7 @@ class TributePublisherApp:
             "published_iso": published_iso,
             "image_filename": image_filename,
             "image2_filename": img2_filename,
+            "featured": False,
         }
 
         # prevent duplicates by slug
