@@ -9,10 +9,11 @@
     "excerpt": "You carried your strength quietly - blue eyes, loyal heart, always ready to stand beside me.",
     "first_name": "Kristen",
     "state": "AR",
-    "published_iso": "2026-02-25",
+    "published_iso": "2026-02-25T00:00:00",
     "image_filename": "kira-siberian-husky-2012-2020.webp",
     "image2_filename": "",
-    "featured": false
+    "featured": false,
+    "email_sent": false
   },
   {
     "slug": "miss-molly-dachshund-2010-2026",
@@ -24,10 +25,11 @@
     "excerpt": "Miss Molly was a rescue. We got her in 2010. Bless her ❤. She became family after just a few short weeks. We sure love and miss her. Thanks to Rodney we have a great headstone for her. Perfect for her.",
     "first_name": "Dava",
     "state": "AR",
-    "published_iso": "2026-02-25",
+    "published_iso": "2026-02-25T00:00:00",
     "image_filename": "miss-molly-dachshund-2010-2026.webp",
     "image2_filename": "miss-molly-dachshund-2010-2026-2.webp",
-    "featured": false
+    "featured": false,
+    "email_sent": false
   },
   {
     "slug": "woodland-cat",
@@ -40,10 +42,11 @@
     "first_name": "Kayly",
     "state": "AR",
     "email": "",
-    "published_iso": "2026-02-26",
+    "published_iso": "2026-02-26T00:00:00",
     "image_filename": "woodland-cat.webp",
     "image2_filename": "",
-    "featured": false
+    "featured": false,
+    "email_sent": false
   },
   {
     "slug": "phoebe-dog-american-akita",
@@ -56,9 +59,10 @@
     "first_name": "Rodney and Tina",
     "state": "AR",
     "email": "rcmelton@icloud.com",
-    "published_iso": "2026-02-26",
+    "published_iso": "2026-02-26T00:00:00",
     "image_filename": "phoebe-dog-american-akita.webp",
     "image2_filename": "phoebe-dog-american-akita-2.webp",
-    "featured": true
+    "featured": true,
+    "email_sent": true
   }
 ]

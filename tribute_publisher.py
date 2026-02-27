@@ -5,8 +5,12 @@ import re
 import shutil
 import json
 import html
+import urllib.parse
 import unicodedata
+import smtplib
+import ssl
 from datetime import datetime
+from email.message import EmailMessage
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, ttk
 from PIL import Image
@@ -194,6 +198,16 @@ def normalize_dates_text(value: str) -> str:
     return s
 
 
+def normalize_published_iso(value: str) -> str:
+    """Normalize published date values to full ISO timestamps."""
+    raw = (value or "").strip()
+    if not raw:
+        return ""
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", raw):
+        return f"{raw}T00:00:00"
+    return raw
+
+
 def safe_mkdir(path: str):
     os.makedirs(path, exist_ok=True)
 
@@ -299,8 +313,13 @@ def load_data() -> list[dict]:
     with open(ARCHIVE_DATA, "r", encoding="utf-8-sig") as f:
         items = json.load(f)
     for item in items:
+        item["published_iso"] = normalize_published_iso(
+            item.get("published_iso") or item.get("publish_date") or ""
+        )
         # Missing or non-true values are treated as not featured.
         item["featured"] = item.get("featured") is True
+        # Internal publish-tracking flag (defaults to False).
+        item["email_sent"] = item.get("email_sent") is True
     return items
 
 
@@ -311,21 +330,30 @@ def save_data(items: list[dict]):
 
 
 def sort_entries_newest_first(items: list[dict]) -> list[dict]:
-    featured = [item for item in items if item.get("featured") is True]
-    others = [item for item in items if item.get("featured") is not True]
-
-    # Keep the newest first for non-featured tributes.
-    # Tie-breaker: original list position (later/appended entries first).
-    enumerated_others = list(enumerate(others))
-    enumerated_others.sort(
+    enumerated = list(enumerate(items))
+    enumerated.sort(
         key=lambda pair: (
-            (pair[1].get("published_iso") or pair[1].get("publish_date") or ""),
+            normalize_published_iso(
+                pair[1].get("published_iso") or pair[1].get("publish_date") or ""
+            ),
             pair[0],
         ),
         reverse=True,
     )
-    others_sorted = [item for _, item in enumerated_others]
-    return featured + others_sorted
+    entries_sorted = [item for _, item in enumerated]
+
+    featured_entries = [e for e in entries_sorted if e.get("featured") is True]
+    if len(featured_entries) > 1:
+        # Keep only the newest featured tribute.
+        for e in featured_entries[1:]:
+            e["featured"] = False
+
+    featured_entry = next((e for e in entries_sorted if e.get("featured") is True), None)
+    if featured_entry:
+        entries_sorted.remove(featured_entry)
+        entries_sorted.insert(0, featured_entry)
+
+    return entries_sorted
 
 
 def build_card_html(entry: dict) -> str:
@@ -338,8 +366,11 @@ def build_card_html(entry: dict) -> str:
     image_filename = entry.get("image_filename", "")
     publish_label = ""
     if entry.get("published_iso"):
-        dt = datetime.strptime(entry["published_iso"], "%Y-%m-%d")
-        publish_label = dt.strftime("%b %Y")
+        try:
+            dt = datetime.fromisoformat(normalize_published_iso(entry.get("published_iso", "")))
+            publish_label = dt.strftime("%b %Y")
+        except Exception:
+            publish_label = ""
     first_name = (entry.get("first_name") or "").strip()
     state = (entry.get("state") or "").strip()
     email = (entry.get("email") or "").strip()
@@ -412,7 +443,21 @@ def build_card_html(entry: dict) -> str:
 
 
 def page_url(page_num: int) -> str:
-    return "/pet-tributes/" if page_num == 1 else f"/pet-tributes/page-{page_num}/"
+    return page_url_for_prefix(page_num, "/pet-tributes/")
+
+
+def page_url_for_prefix(page_num: int, prefix: str) -> str:
+    """
+    prefix examples:
+      "/pet-tributes/"              (main archive)
+      "/pet-tributes/dog/"          (pet-type archive root)
+    """
+    prefix = (prefix or "/").strip()
+    if not prefix.startswith("/"):
+        prefix = "/" + prefix
+    if not prefix.endswith("/"):
+        prefix += "/"
+    return prefix if page_num == 1 else f"{prefix}page-{page_num}/"
 
 
 def css_href_for_page(page_num: int) -> str:
@@ -421,20 +466,24 @@ def css_href_for_page(page_num: int) -> str:
 
 
 def build_pagination(current: int, total: int) -> str:
+    return build_pagination_for_prefix(current, total, "/pet-tributes/")
+
+
+def build_pagination_for_prefix(current: int, total: int, prefix: str) -> str:
     if total <= 1:
         return ""
 
     parts = []
 
     if current > 1:
-        parts.append(f'<a class="mm-page-arrow" href="{page_url(current-1)}">←</a>')
+        parts.append(f'<a class="mm-page-arrow" href="{page_url_for_prefix(current-1, prefix)}">←</a>')
 
     for i in range(1, total + 1):
         active = "mm-page-active" if i == current else ""
-        parts.append(f'<a class="mm-page-number {active}" href="{page_url(i)}">{i}</a>')
+        parts.append(f'<a class="mm-page-number {active}" href="{page_url_for_prefix(i, prefix)}">{i}</a>')
 
     if current < total:
-        parts.append(f'<a class="mm-page-arrow" href="{page_url(current+1)}">→</a>')
+        parts.append(f'<a class="mm-page-arrow" href="{page_url_for_prefix(current+1, prefix)}">→</a>')
 
     return f'<div class="mm-pagination">{" ".join(parts)}</div>'
 
@@ -509,6 +558,53 @@ def build_archive_full_html(cards_html: str, current_page: int, total_pages: int
 
     return final_html
 
+
+def write_archive_page(
+    page_entries: list[dict],
+    title: str,
+    canonical: str,
+    output_folder: str,
+    current_page: int,
+    total_pages: int,
+    pagination_prefix: str,
+):
+    cards_html = "".join(build_card_html(e) for e in page_entries)
+    pagination_html = build_pagination_for_prefix(current_page, total_pages, pagination_prefix)
+
+    archive_schema_json = build_archive_schema(SITE_DOMAIN, page_entries)
+    archive_schema_block = f"""
+  <script type="application/ld+json">
+{archive_schema_json}
+  </script>
+""".strip()
+
+    head_meta = f"""
+  <title>{escape_html(title)}</title>
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="{canonical}">
+  {archive_schema_block}
+""".strip()
+
+    base = load_template("base.html")
+    archive_template = load_template("archive.html")
+
+    content = archive_template.replace("{{CARDS}}", cards_html)
+    content = content.replace("{{PAGINATION}}", pagination_html)
+
+    header_template = load_template("header.html")
+    header_html = header_template.replace("{{HEADER_CLASSES}}", "site-header")
+    footer_html = load_template("footer.html")
+
+    final_html = base.replace("{{HEAD_META}}", head_meta)
+    final_html = final_html.replace("{{HEADER}}", header_html)
+    final_html = final_html.replace("{{CONTENT}}", content)
+    final_html = final_html.replace("{{FOOTER}}", footer_html)
+
+    os.makedirs(output_folder, exist_ok=True)
+    with open(os.path.join(output_folder, "index.html"), "w", encoding="utf-8") as f:
+        f.write(final_html)
+
+
 def rebuild_archive_pages(entries):
     from math import ceil
 
@@ -528,39 +624,94 @@ def rebuild_archive_pages(entries):
             shutil.rmtree(folder, ignore_errors=True)
 
     for page_num in range(1, total_pages + 1):
-
         start = (page_num - 1) * CARDS_PER_PAGE
         end = start + CARDS_PER_PAGE
         page_entries = entries[start:end]
 
-        cards_html = ""
-        for entry in page_entries:
-            cards_html += build_card_html(entry)
+        title = "Pet Memorial Tributes" if page_num == 1 else f"Pet Memorial Tributes — Page {page_num}"
+        canonical = SITE_DOMAIN + page_url_for_prefix(page_num, "/pet-tributes/")
+        pagination_prefix = "/pet-tributes/"
 
-        # Build full archive page via template system
-        final_html = build_archive_full_html(cards_html, page_num, total_pages, page_entries)
-
-        # Determine path
         if page_num == 1:
-            page_path = os.path.join(TRIBUTES_DIR, "index.html")
+            output_folder = TRIBUTES_DIR
         else:
-            page_folder = os.path.join(TRIBUTES_DIR, f"page-{page_num}")
-            os.makedirs(page_folder, exist_ok=True)
-            page_path = os.path.join(page_folder, "index.html")
+            output_folder = os.path.join(TRIBUTES_DIR, f"page-{page_num}")
 
-        with open(page_path, "w", encoding="utf-8") as f:
-            f.write(final_html)
+        write_archive_page(
+            page_entries=page_entries,
+            title=title,
+            canonical=canonical,
+            output_folder=output_folder,
+            current_page=page_num,
+            total_pages=total_pages,
+            pagination_prefix=pagination_prefix,
+        )
+
+
+def rebuild_pet_type_archives(entries):
+    from math import ceil
+
+    # Normalize and group by pet_type slug
+    grouped = {}
+
+    for entry in entries:
+        pet_type = (entry.get("pet_type") or "").strip()
+        if not pet_type:
+            continue
+
+        pet_type_slug = slugify(pet_type)
+        if not pet_type_slug:
+            continue
+
+        grouped.setdefault(pet_type_slug, []).append(entry)
+
+    # Build each pet type archive
+    for pet_type_slug, type_entries in grouped.items():
+        type_entries = sort_entries_newest_first(type_entries)
+
+        total_pages = ceil(len(type_entries) / CARDS_PER_PAGE)
+        if total_pages == 0:
+            total_pages = 1
+
+        for page_num in range(1, total_pages + 1):
+            start = (page_num - 1) * CARDS_PER_PAGE
+            end = start + CARDS_PER_PAGE
+            page_entries = type_entries[start:end]
+
+            title = f"{pet_type_slug.capitalize()} Memorial Tributes"
+            if page_num > 1:
+                title = f"{title} — Page {page_num}"
+            pagination_prefix = f"/pet-tributes/{pet_type_slug}/"
+            canonical = SITE_DOMAIN + page_url_for_prefix(page_num, pagination_prefix)
+
+            if page_num == 1:
+                output_folder = os.path.join(TRIBUTES_DIR, pet_type_slug)
+            else:
+                output_folder = os.path.join(TRIBUTES_DIR, pet_type_slug, f"page-{page_num}")
+
+            write_archive_page(
+                page_entries=page_entries,
+                title=title,
+                canonical=canonical,
+                output_folder=output_folder,
+                current_page=page_num,
+                total_pages=total_pages,
+                pagination_prefix=pagination_prefix,
+            )
 
 
 def generate_sitemap(data: list[dict]):
+    from math import ceil
+
     sitemap_path = os.path.join(TRIBUTES_DIR, "sitemap.xml")
 
     urls = []
-    for item in data:
-        slug = (item.get("slug") or "").strip()
-        if not slug:
-            continue
-        loc = f"{SITE_DOMAIN}{get_entry_web_base(item)}"
+    seen_locs = set()
+
+    def add_url(loc: str):
+        if not loc or loc in seen_locs:
+            return
+        seen_locs.add(loc)
         urls.append(
             f"""
   <url>
@@ -569,6 +720,38 @@ def generate_sitemap(data: list[dict]):
     <priority>0.7</priority>
   </url>"""
         )
+
+    entries_sorted = sort_entries_newest_first(data)
+    main_total_pages = ceil(len(entries_sorted) / CARDS_PER_PAGE)
+    if main_total_pages == 0:
+        main_total_pages = 1
+    for page_num in range(1, main_total_pages + 1):
+        add_url(SITE_DOMAIN + page_url_for_prefix(page_num, "/pet-tributes/"))
+
+    grouped = {}
+    for entry in entries_sorted:
+        pet_type = (entry.get("pet_type") or "").strip()
+        if not pet_type:
+            continue
+        pet_type_slug = slugify(pet_type)
+        if not pet_type_slug:
+            continue
+        grouped.setdefault(pet_type_slug, []).append(entry)
+
+    for pet_type_slug, type_entries in grouped.items():
+        type_total_pages = ceil(len(type_entries) / CARDS_PER_PAGE)
+        if type_total_pages == 0:
+            type_total_pages = 1
+        prefix = f"/pet-tributes/{pet_type_slug}/"
+        for page_num in range(1, type_total_pages + 1):
+            add_url(SITE_DOMAIN + page_url_for_prefix(page_num, prefix))
+
+    for item in data:
+        slug = (item.get("slug") or "").strip()
+        if not slug:
+            continue
+        loc = f"{SITE_DOMAIN}{get_entry_web_base(item)}"
+        add_url(loc)
 
     sitemap_content = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -643,10 +826,12 @@ def migrate_existing_folders_to_json():
             "published_iso": "2026-02-01",
             "image_filename": image_filename,
             "featured": False,
+            "email_sent": False,
         })
 
     save_data(entries)
     rebuild_archive_pages(entries)
+    rebuild_pet_type_archives(entries)
     generate_sitemap(entries)
 
 
@@ -912,7 +1097,7 @@ def rebuild_single_tribute_page(entry: dict, tribute_message_override: str = "")
         og_image_abs=og_image_abs,
         user_uploaded_image=not is_placeholder_image,
         second_image_filename=entry.get("image2_filename", ""),
-        publish_date_iso=(entry.get("published_iso") or datetime.now().strftime("%Y-%m-%d")),
+        publish_date_iso=(entry.get("published_iso") or datetime.now().isoformat(timespec="seconds")),
         tribute_message_html=tribute_message_html,
     )
 
@@ -999,6 +1184,9 @@ class TributePublisherApp:
         self.root.title("Melton Memorials — Tribute Publisher")
         self.root.geometry("1380x920")
         self.root.minsize(1220, 760)
+        self.last_tribute_url = ""
+        self.last_email = ""
+        self.last_first_name = ""
 
         self.image_path = tk.StringVar(value="")
         self.image2_path = tk.StringVar(value="")
@@ -1038,6 +1226,15 @@ class TributePublisherApp:
         tk.Label(create_frame, text="Email (optional)").grid(row=11, column=0, sticky="w", **pad)
         self.email = tk.Entry(create_frame, width=44)
         self.email.grid(row=11, column=1, sticky="w", **pad)
+        self.email_sent_var = tk.BooleanVar(value=False)
+        self.email_sent_check = tk.Checkbutton(
+            create_frame,
+            text="Tribute Published (Email Sent)",
+            variable=self.email_sent_var,
+            onvalue=True,
+            offvalue=False,
+        )
+        self.email_sent_check.grid(row=12, column=1, sticky="w", **pad)
 
         tk.Label(create_frame, text="Breed (optional)").grid(row=4, column=0, sticky="w", **pad)
         self.breed = tk.Entry(create_frame, width=44)
@@ -1096,16 +1293,25 @@ class TributePublisherApp:
         self.btn_clear_image2 = tk.Button(img2_row, text="Clear", command=self.clear_image2)
         self.btn_clear_image2.pack(side="left")
 
+        action_row = tk.Frame(create_frame)
+        action_row.grid(row=13, column=1, sticky="w", padx=10, pady=14)
         self.btn_generate = tk.Button(
-            create_frame, text="Generate Tribute Files", command=self.generate, height=2, width=26
+            action_row, text="Generate Tribute Files", command=self.generate, height=2, width=26
         )
-        self.btn_generate.grid(row=12, column=1, sticky="w", padx=10, pady=14)
+        self.btn_generate.pack(side="left")
+        self.open_email_btn = tk.Button(
+            action_row,
+            text="Send Publish Email",
+            command=self.send_publish_email,
+            width=20,
+        )
+        self.open_email_btn.pack(side="left", padx=(10, 0))
 
         tk.Label(
             create_frame,
             text=f"Output: {TRIBUTES_DIR}\nArchive: {ARCHIVE_INDEX}",
             fg="#444"
-        ).grid(row=13, column=0, columnspan=2, sticky="w", padx=10, pady=6)
+        ).grid(row=14, column=0, columnspan=2, sticky="w", padx=10, pady=6)
 
         # Force tab flow to match the visible top-to-bottom form layout.
         self._apply_create_form_tab_order([
@@ -1121,8 +1327,11 @@ class TributePublisherApp:
             self.first_name,
             self.state,
             self.email,
+            self.email_sent_check,
             self.btn_generate,
+            self.open_email_btn,
         ])
+        self.refresh_email_button_state()
 
         # manager tab layout
         self.checked_slugs = set()
@@ -1240,6 +1449,10 @@ class TributePublisherApp:
             full_tribute_message = ""
         if not full_tribute_message:
             full_tribute_message = (entry.get("excerpt") or "").strip()
+        self.last_tribute_url = f"{SITE_DOMAIN}{get_entry_web_base(entry)}"
+        self.last_email = (entry.get("email") or "").strip()
+        self.last_first_name = (entry.get("first_name") or "").strip()
+        self.refresh_email_button_state()
 
         dialog = tk.Toplevel(self.root)
         dialog.title(f"Edit Tribute — {slug}")
@@ -1354,6 +1567,17 @@ class TributePublisherApp:
         widgets["email"].grid(row=row, column=1, sticky="w", **pad)
         row += 1
 
+        edit_email_sent_var = tk.BooleanVar(value=(entry.get("email_sent") is True))
+        widgets["email_sent_var"] = edit_email_sent_var
+        tk.Checkbutton(
+            dialog,
+            text="Tribute Published (Email Sent)",
+            variable=edit_email_sent_var,
+            onvalue=True,
+            offvalue=False,
+        ).grid(row=row, column=1, sticky="w", **pad)
+        row += 1
+
         def resolve_image_field(field_key: str, output_filename: str, label: str):
             value = image1_display.get().strip() if field_key == "image_filename" else image2_display.get().strip()
             chosen_upload = (selected_uploads.get(field_key) or "").strip()
@@ -1438,6 +1662,7 @@ class TributePublisherApp:
             entry["first_name"] = widgets["first_name"].get().strip()
             entry["state"] = widgets["state"].get().strip()
             entry["email"] = widgets["email"].get().strip()
+            entry["email_sent"] = widgets["email_sent_var"].get() is True
             entry["excerpt"] = summarize_excerpt(strip_markdown_for_excerpt(edited_tribute_message))
 
             image1_filename = resolve_image_field("image_filename", f"{slug}.webp", "Image 1")
@@ -1454,10 +1679,15 @@ class TributePublisherApp:
             entry["image_filename"] = image1_filename
             entry["image2_filename"] = image2_filename
             entry["years_pretty"] = normalize_dates_text(entry.get("years_pretty", ""))
+            self.last_tribute_url = f"{SITE_DOMAIN}{get_entry_web_base(entry)}"
+            self.last_email = entry.get("email", "").strip()
+            self.last_first_name = entry.get("first_name", "").strip()
+            self.refresh_email_button_state()
 
             save_data(tributes)
             rebuild_single_tribute_page(entry, tribute_message_override=edited_tribute_message)
             rebuild_archive_pages(tributes)
+            rebuild_pet_type_archives(tributes)
             generate_sitemap(tributes)
             self.refresh_tribute_table()
             messagebox.showinfo("Saved", f'Updated tribute "{slug}".')
@@ -1466,6 +1696,7 @@ class TributePublisherApp:
         btn_row = ttk.Frame(dialog)
         btn_row.grid(row=row, column=0, columnspan=3, sticky="e", padx=10, pady=(8, 10))
         ttk.Button(btn_row, text="Cancel", command=dialog.destroy).pack(side="right")
+        ttk.Button(btn_row, text="Send Publish Email", command=self.send_publish_email).pack(side="right", padx=(0, 8))
         ttk.Button(btn_row, text="Save Changes", command=on_save).pack(side="right", padx=(0, 8))
 
     def delete_selected_tribute(self):
@@ -1491,6 +1722,7 @@ class TributePublisherApp:
         tributes = [t for t in tributes if t.get("slug") not in slugs]
         save_data(tributes)
         rebuild_archive_pages(tributes)
+        rebuild_pet_type_archives(tributes)
         generate_sitemap(tributes)
         self.checked_slugs.clear()
         self.refresh_tribute_table()
@@ -1519,12 +1751,99 @@ class TributePublisherApp:
     def clear_image2(self):
         self.image2_path.set("")
 
+    def mark_email_sent_true(self):
+        tribute_url = (getattr(self, "last_tribute_url", "") or "").strip()
+        if not tribute_url:
+            return
+
+        entries = load_data()
+        updated = False
+        for entry in entries:
+            candidate_url = f"{SITE_DOMAIN}{get_entry_web_base(entry)}"
+            if candidate_url == tribute_url:
+                entry["email_sent"] = True
+                updated = True
+                break
+
+        if updated:
+            save_data(entries)
+            self.refresh_tribute_table()
+
+    def send_publish_email(self):
+        email = (getattr(self, "last_email", "") or "").strip()
+        first_name = (getattr(self, "last_first_name", "") or "there").strip()
+        tribute_url = (getattr(self, "last_tribute_url", "") or "").strip()
+
+        if not email or not tribute_url:
+            messagebox.showwarning("Cannot send email", "Missing customer email or tribute URL.")
+            return
+
+        smtp_server = "mail.privateemail.com"
+        smtp_port = 465
+        sender_email = "rodney@meltonmemorials.com"
+        password = os.environ.get("MM_EMAIL_PASS")
+
+        if not password:
+            messagebox.showerror("Missing Password", "Environment variable MM_EMAIL_PASS not set.")
+            return
+
+        msg = EmailMessage()
+        msg["Subject"] = "Your tribute has been published"
+        msg["From"] = sender_email
+        msg["To"] = email
+
+        msg.set_content(f"""
+Hi {first_name},
+
+Your pet’s tribute has now been published.
+
+View the tribute here:
+{tribute_url}
+
+With respect,
+Melton Memorials
+Alma, Arkansas
+""")
+
+        msg.add_alternative(f"""
+<html>
+  <body>
+    <p>Hi {first_name},</p>
+    <p>Your pet’s tribute has now been published.</p>
+    <p><a href="{tribute_url}">Click here to view the tribute</a></p>
+    <p>With respect,<br>
+    Melton Memorials<br>
+    Alma, Arkansas</p>
+  </body>
+</html>
+""", subtype="html")
+
+        try:
+            context = ssl.create_default_context()
+            with smtplib.SMTP_SSL(smtp_server, smtp_port, context=context) as server:
+                server.login(sender_email, password)
+                server.send_message(msg)
+
+            messagebox.showinfo("Success", "Publish email sent successfully.")
+            self.mark_email_sent_true()
+
+        except Exception as e:
+            messagebox.showerror("Email Failed", str(e))
+
+    def refresh_email_button_state(self):
+        email = (getattr(self, "last_email", "") or "").strip()
+        tribute_url = (getattr(self, "last_tribute_url", "") or "").strip()
+        state = "normal" if (email and tribute_url) else "disabled"
+        if hasattr(self, "open_email_btn"):
+            self.open_email_btn.config(state=state)
+
     def generate(self):
         pet_name = self.pet_name.get().strip()
         pet_type = self.pet_type.get().strip()
         first_name = self.first_name.get().strip()
         state = self.state.get().strip()
         email = self.email.get().strip()
+        email_sent = self.email_sent_var.get() is True
         breed = self.breed.get().strip()
         years_raw = self.years.get().strip()
         tribute_msg = self.message.get("1.0", "end").strip()
@@ -1631,7 +1950,7 @@ class TributePublisherApp:
                 return
 
         # Build tribute page values
-        publish_date_iso = datetime.now().strftime("%Y-%m-%d")
+        publish_date_iso = datetime.now().isoformat(timespec="seconds")
         page_url = f"{SITE_DOMAIN}{tribute_web_path}"
         excerpt = summarize_excerpt(strip_markdown_for_excerpt(tribute_msg))
 
@@ -1675,7 +1994,7 @@ class TributePublisherApp:
         # ---- JSON-backed archive update + rebuild ----
         entries = existing_entries
 
-        published_iso = datetime.now().strftime("%Y-%m-%d")
+        published_iso = datetime.now().isoformat(timespec="seconds")
 
         # if user didn't pick an image, we still create a card, but image_filename must exist for cards
         # (recommend: require image for now, OR set to placeholder filename)
@@ -1696,6 +2015,7 @@ class TributePublisherApp:
             "image_filename": image_filename,
             "image2_filename": img2_filename,
             "featured": False,
+            "email_sent": email_sent,
         }
 
         # prevent duplicates by slug
@@ -1704,9 +2024,14 @@ class TributePublisherApp:
 
         save_data(entries)
         rebuild_archive_pages(entries)
+        rebuild_pet_type_archives(entries)
         generate_sitemap(entries)
         self.refresh_tribute_table()
 
+        self.last_tribute_url = page_url
+        self.last_email = email
+        self.last_first_name = first_name
+        self.refresh_email_button_state()
         messagebox.showinfo(
             "Tribute Created Successfully",
             f"Created locally at:\n\n"
