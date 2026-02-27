@@ -707,6 +707,31 @@ def build_tribute_html(
         "mainEntityOfPage": canonical_url,
     }
     schema_json = json.dumps(schema_data, ensure_ascii=False)
+    breadcrumb_data = {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Home",
+                "item": "https://meltonmemorials.com/",
+            },
+            {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "Pet Tributes",
+                "item": "https://meltonmemorials.com/pet-tributes/",
+            },
+            {
+                "@type": "ListItem",
+                "position": 3,
+                "name": title,
+                "item": canonical_url,
+            },
+        ],
+    }
+    breadcrumb_json = json.dumps(breadcrumb_data, ensure_ascii=False)
 
     # ----- Load base template -----
     base = load_template("base.html")
@@ -724,6 +749,9 @@ def build_tribute_html(
   <meta name="twitter:image" content="{og_image}">
   <script type="application/ld+json">
 {schema_json}
+  </script>
+  <script type="application/ld+json">
+{breadcrumb_json}
   </script>
 """.strip()
 

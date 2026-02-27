@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="82" height="24" viewBox="0 0 82 24" role="img" aria-label="Discover">
+  <rect width="82" height="24" rx="2" fill="#ffffff"/>
+  <text x="31" y="15" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="8.5" font-weight="700" fill="#1A1A1A">DISCOVER</text>
+  <path d="M44 12c3.2-3.1 7-4.8 11.4-5.2-3.1 1.5-5.8 3.1-7.7 5.2 1.8 2 4.6 3.7 7.7 5.1-4.4-.4-8.2-2.1-11.4-5.1z" fill="#F58220"/>
+</svg>

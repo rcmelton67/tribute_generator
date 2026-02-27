@@ -277,6 +277,20 @@ body {
     color: #444;
 }
 
+.footer-payments {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.footer-payments img {
+    display: block;
+    height: 24px;
+    width: auto;
+    border-radius: 2px;
+    background: #ffffff;
+}
+
 /* RESPONSIVE */
 /* Hide mobile toggle on desktop */
 .mobile-nav-toggle {
@@ -320,5 +334,9 @@ body {
     .brand-tagline {
         font-size: 9px;
         letter-spacing: 2px;
+    }
+
+    .footer-payments {
+        width: 100%;
     }
 }
