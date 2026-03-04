@@ -558,6 +558,8 @@ def build_archive_full_html(cards_html: str, current_page: int, total_pages: int
   <title>{escape_html(title)}</title>
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="{canonical}">
+  <link rel="icon" type="image/x-icon" href="/pet-tributes/assets/favicon.ico">
+  <link rel="shortcut icon" href="/pet-tributes/assets/favicon.ico">
   {archive_schema_block}
 """.strip()
 
@@ -605,6 +607,8 @@ def write_archive_page(
   <title>{escape_html(title)}</title>
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="{canonical}">
+  <link rel="icon" type="image/x-icon" href="/pet-tributes/assets/favicon.ico">
+  <link rel="shortcut icon" href="/pet-tributes/assets/favicon.ico">
   {archive_schema_block}
 """.strip()
 
