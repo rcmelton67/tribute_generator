@@ -329,6 +329,29 @@ def save_data(items: list[dict]):
         json.dump(items, f, ensure_ascii=False, indent=2)
 
 
+def prune_entries_missing_folders(items: list[dict]) -> tuple[list[dict], list[str]]:
+    """
+    Keep data.json aligned with disk state.
+    Any entry whose tribute folder/index is missing is removed.
+    """
+    kept = []
+    removed_slugs = []
+
+    for item in items:
+        slug = (item.get("slug") or "").strip()
+        if not slug:
+            continue
+
+        tribute_folder = find_tribute_folder(slug, item.get("folder", ""))
+        index_file = os.path.join(tribute_folder, "index.html")
+        if os.path.isdir(tribute_folder) and os.path.exists(index_file):
+            kept.append(item)
+        else:
+            removed_slugs.append(slug)
+
+    return kept, removed_slugs
+
+
 def sort_entries_newest_first(items: list[dict]) -> list[dict]:
     enumerated = list(enumerate(items))
     enumerated.sort(
@@ -1781,6 +1804,7 @@ class TributePublisherApp:
         smtp_server = "mail.privateemail.com"
         smtp_port = 465
         sender_email = "rodney@meltonmemorials.com"
+        bcc_email = sender_email  # Internal delivery confirmation copy.
         password = os.environ.get("MM_EMAIL_PASS")
 
         if not password:
@@ -1822,7 +1846,10 @@ Alma, Arkansas
             context = ssl.create_default_context()
             with smtplib.SMTP_SSL(smtp_server, smtp_port, context=context) as server:
                 server.login(sender_email, password)
-                server.send_message(msg)
+                recipients = [email]
+                if bcc_email and bcc_email.lower() != email.lower():
+                    recipients.append(bcc_email)
+                server.send_message(msg, to_addrs=recipients)
 
             messagebox.showinfo("Success", "Publish email sent successfully.")
             self.mark_email_sent_true()
@@ -2045,6 +2072,14 @@ Alma, Arkansas
 
 def main():
     safe_mkdir(TRIBUTES_DIR)
+    entries = load_data()
+    synced_entries, removed_slugs = prune_entries_missing_folders(entries)
+    if removed_slugs:
+        save_data(synced_entries)
+        rebuild_archive_pages(synced_entries)
+        rebuild_pet_type_archives(synced_entries)
+        generate_sitemap(synced_entries)
+        print(f"Startup sync removed {len(removed_slugs)} missing tribute(s): {', '.join(removed_slugs)}")
     root = tk.Tk()
     app = TributePublisherApp(root)
     root.mainloop()

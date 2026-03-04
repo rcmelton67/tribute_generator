@@ -13,7 +13,8 @@
     "image_filename": "kira-siberian-husky-2012-2020.webp",
     "image2_filename": "",
     "featured": false,
-    "email_sent": false
+    "email_sent": true,
+    "email": "kristenelainebrown@gmail.com"
   },
   {
     "slug": "miss-molly-dachshund-2010-2026",
@@ -29,7 +30,8 @@
     "image_filename": "miss-molly-dachshund-2010-2026.webp",
     "image2_filename": "miss-molly-dachshund-2010-2026-2.webp",
     "featured": false,
-    "email_sent": false
+    "email_sent": false,
+    "email": "dmelton912@yahoo.com"
   },
   {
     "slug": "woodland-cat",
@@ -63,6 +65,23 @@
     "image_filename": "phoebe-dog-american-akita.webp",
     "image2_filename": "phoebe-dog-american-akita-2.webp",
     "featured": true,
+    "email_sent": true
+  },
+  {
+    "slug": "lucy-dog-great-pyrenees",
+    "pet_name": "Lucy",
+    "breed": "Great Pyrenees",
+    "pet_type": "Dog",
+    "folder": "memorials",
+    "years_pretty": "2023 - 2025",
+    "excerpt": "Lucy’s Journey Home We got Lucy from the animal shelter on January 9, 2023. She was heartworm positive (we got that negative). She was found roaming, as Pyrenees often do. Many times we had to track her down — AirTags...",
+    "first_name": "Kay",
+    "state": "GA",
+    "email": "kaymit@comcast.net",
+    "published_iso": "2026-03-04T16:25:08",
+    "image_filename": "lucy-dog-great-pyrenees.webp",
+    "image2_filename": "",
+    "featured": false,
     "email_sent": true
   }
 ]
