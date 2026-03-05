@@ -169,8 +169,7 @@ def parse_safe_markdown(text: str) -> str:
 
 
 def strip_markdown_for_excerpt(text: str) -> str:
-    # Escape any HTML first
-    text = html.escape(text or "")
+    text = text or ""
 
     # Remove headings
     text = re.sub(r"^### (.+)$", r"\1", text, flags=re.MULTILINE)
@@ -183,7 +182,8 @@ def strip_markdown_for_excerpt(text: str) -> str:
     # Collapse whitespace
     text = re.sub(r"\s+", " ", text).strip()
 
-    return text
+    # Decode entities so card previews show normal punctuation/quotes.
+    return html.unescape(text)
 
 
 def normalize_dates_text(value: str) -> str:
@@ -542,6 +542,10 @@ def build_archive_full_html(cards_html: str, current_page: int, total_pages: int
 
     title = "Pet Memorial Tributes" if current_page == 1 else f"Pet Memorial Tributes — Page {current_page}"
     canonical = SITE_DOMAIN + page_url(current_page)
+    og_title = title
+    og_description = "Browse pet memorial tributes honoring beloved companions."
+    og_image = f"{SITE_DOMAIN}/pet-tributes/assets/blank_memorial_loving_memory.png"
+    og_url = canonical
 
     # Load base + archive template
     base = load_template("base.html")
@@ -580,6 +584,15 @@ def build_archive_full_html(cards_html: str, current_page: int, total_pages: int
     final_html = final_html.replace("{{HEADER}}", header_html)
     final_html = final_html.replace("{{CONTENT}}", content)
     final_html = final_html.replace("{{FOOTER}}", footer_html)
+    final_html = final_html.replace("{{OG_TITLE}}", escape_html(og_title))
+    final_html = final_html.replace("{{OG_DESCRIPTION}}", escape_html(og_description))
+    final_html = final_html.replace("{{OG_URL}}", og_url)
+    final_html = final_html.replace("{{CANONICAL_URL}}", canonical)
+    final_html = final_html.replace("{{OG_IMAGE}}", og_image)
+    final_html = final_html.replace("{{PUBLISHED_TIME}}", datetime.now().isoformat(timespec="seconds"))
+    final_html = final_html.replace("{{TWITTER_TITLE}}", escape_html(og_title))
+    final_html = final_html.replace("{{TWITTER_DESCRIPTION}}", escape_html(og_description))
+    final_html = final_html.replace("{{TWITTER_IMAGE}}", og_image)
 
     return final_html
 
@@ -595,6 +608,10 @@ def write_archive_page(
 ):
     cards_html = "".join(build_card_html(e) for e in page_entries)
     pagination_html = build_pagination_for_prefix(current_page, total_pages, pagination_prefix)
+    og_title = title
+    og_description = "Browse pet memorial tributes honoring beloved companions."
+    og_image = f"{SITE_DOMAIN}/pet-tributes/assets/blank_memorial_loving_memory.png"
+    og_url = canonical
 
     archive_schema_json = build_archive_schema(SITE_DOMAIN, page_entries)
     archive_schema_block = f"""
@@ -626,6 +643,15 @@ def write_archive_page(
     final_html = final_html.replace("{{HEADER}}", header_html)
     final_html = final_html.replace("{{CONTENT}}", content)
     final_html = final_html.replace("{{FOOTER}}", footer_html)
+    final_html = final_html.replace("{{OG_TITLE}}", escape_html(og_title))
+    final_html = final_html.replace("{{OG_DESCRIPTION}}", escape_html(og_description))
+    final_html = final_html.replace("{{OG_URL}}", og_url)
+    final_html = final_html.replace("{{CANONICAL_URL}}", canonical)
+    final_html = final_html.replace("{{OG_IMAGE}}", og_image)
+    final_html = final_html.replace("{{PUBLISHED_TIME}}", datetime.now().isoformat(timespec="seconds"))
+    final_html = final_html.replace("{{TWITTER_TITLE}}", escape_html(og_title))
+    final_html = final_html.replace("{{TWITTER_DESCRIPTION}}", escape_html(og_description))
+    final_html = final_html.replace("{{TWITTER_IMAGE}}", og_image)
 
     os.makedirs(output_folder, exist_ok=True)
     with open(os.path.join(output_folder, "index.html"), "w", encoding="utf-8") as f:
@@ -891,6 +917,7 @@ def build_tribute_html(
         subtitle = f"{pet_type_title} Memorial Tribute"
 
     title = f"{pet_name} {pet_type_title} Memorial Tribute | Melton Memorials"
+    og_title = f"{pet_name} - {breed_clean + ' ' if breed_clean else ''}Pet Memorial Tribute".strip()
 
     years_pretty = normalize_dates_text(years_pretty)
     plain_message = re.sub(r"<[^>]+>", " ", tribute_message_html or "")
@@ -899,6 +926,7 @@ def build_tribute_html(
     clean_message = re.sub(r"\s+\.", ".", clean_message)
     clean_message = re.sub(r"\s{2,}", " ", clean_message).strip()
     og_description = excerpt or f"Read the memorial tribute for {pet_name}, a beloved {pet_type_lower}, honored with a handcrafted memorial stone."
+    og_description = re.sub(r"\s+", " ", og_description.replace("\n", " ")).strip()[:160]
     descriptor = f"{breed_clean + ' ' if breed_clean else ''}{pet_type_lower}".strip()
     descriptor = re.sub(r"\s+", " ", descriptor)
     tribute_preview = clean_meta_preview(clean_message or excerpt, max_chars=120)
@@ -960,6 +988,7 @@ def build_tribute_html(
 
     canonical_url = page_url
     full_image_url = og_image
+    og_url = page_url
     publish_date = publish_date_iso
     meta_description = structured_meta
     schema_data = {
@@ -1051,11 +1080,15 @@ def build_tribute_html(
 
     # ----- Assemble final page -----
     final_html = base.replace("{{HEAD_META}}", head_meta)
-    final_html = final_html.replace("{{OG_TITLE}}", escape_html(title))
-    final_html = final_html.replace("{{OG_DESCRIPTION}}", escape_html(structured_meta))
+    final_html = final_html.replace("{{OG_TITLE}}", escape_html(og_title))
+    final_html = final_html.replace("{{OG_DESCRIPTION}}", escape_html(og_description))
+    final_html = final_html.replace("{{OG_URL}}", og_url)
     final_html = final_html.replace("{{CANONICAL_URL}}", page_url)
-    final_html = final_html.replace("{{OG_IMAGE}}", og_image)
+    final_html = final_html.replace("{{OG_IMAGE}}", full_image_url)
     final_html = final_html.replace("{{PUBLISHED_TIME}}", publish_date_iso)
+    final_html = final_html.replace("{{TWITTER_TITLE}}", escape_html(og_title))
+    final_html = final_html.replace("{{TWITTER_DESCRIPTION}}", escape_html(og_description))
+    final_html = final_html.replace("{{TWITTER_IMAGE}}", full_image_url)
     final_html = final_html.replace("{{HEADER}}", header_html)
     final_html = final_html.replace("{{CONTENT}}", content)
     final_html = final_html.replace("{{FOOTER}}", footer_html)

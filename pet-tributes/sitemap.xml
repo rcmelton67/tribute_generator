@@ -41,4 +41,19 @@
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
+  <url>
+    <loc>https://meltonmemorials.com/pet-tributes/memorials/brownie-dog-mixed-breed/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://meltonmemorials.com/pet-tributes/memorials/missy-dog-rescue-dog/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://meltonmemorials.com/pet-tributes/memorials/mimi-dog-french-bulldog/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
 </urlset>
