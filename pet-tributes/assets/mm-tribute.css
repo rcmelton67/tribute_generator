@@ -104,6 +104,22 @@ body {
     color: #555;
 }
 
+.tribute-count {
+    margin-top: 8px;
+    font-size: 0.95rem;
+    color: #7d766e;
+    font-family: Georgia, "Times New Roman", serif;
+}
+
+.mm-hero-subtext {
+    margin-top: 10px;
+    font-size: 0.95rem;
+    color: #6f6861;
+    max-width: 620px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
 /* ==========================================
    ARCHIVE GRID (NARROWER CARDS)
    ========================================== */
@@ -164,6 +180,10 @@ body {
     overflow: hidden;
 }
 
+.mm-archive-thumb-link {
+    display: block;
+}
+
 .mm-archive-thumb img {
     width: 100%;
     height: 380px;
@@ -174,6 +194,36 @@ body {
 
 .mm-archive-card:hover .mm-archive-thumb img {
     transform: scale(1.06);
+}
+
+.pin-button {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+    color: #5c554e;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    font-weight: 600;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.14);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 2;
+}
+
+.mm-archive-card:hover .pin-button {
+    opacity: 1;
+}
+
+.pin-button:hover {
+    background: #fff;
+    color: #2e2a26;
 }
 
 
@@ -385,6 +435,44 @@ body {
     color: #fff;
 }
 
+.mm-explore-links {
+    margin-top: 28px;
+    text-align: center;
+}
+
+.mm-explore-links h3 {
+    margin-bottom: 10px;
+    font-size: 1.2rem;
+}
+
+.mm-explore-links-row {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.mm-explore-links-row a {
+    color: #5d5650;
+    text-decoration: none;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 0.94rem;
+}
+
+.mm-explore-links-row a:hover {
+    text-decoration: underline;
+}
+
+.mm-recently-remembered {
+    margin-top: 56px;
+}
+
+.mm-recently-remembered h3 {
+    text-align: center;
+    margin-bottom: 18px;
+    font-size: 1.4rem;
+}
+
 .mm-tribute-system {
   padding: 80px 20px 100px;
   width: 100%;
@@ -416,12 +504,6 @@ body {
   margin: 0 0 12px;
   font-weight: 600;
   text-align: center;
-}
-
-.mm-tribute-subtitle {
-  font-size: 18px;
-  margin-bottom: 40px;
-  opacity: 0.85;
 }
 
 .mm-tribute-image {
@@ -459,6 +541,53 @@ body {
   max-width: 760px;
   margin: 0 auto;
   line-height: 1.7;
+}
+
+/* Tribute content width refinement */
+.tribute-body {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.tribute-intro {
+  text-align: center;
+  font-size: 1.15rem;
+  margin: 12px 0 30px 0;
+  color: #555;
+}
+
+.tribute-body h2 {
+  margin-top: 40px;
+  margin-bottom: 12px;
+}
+
+.tribute-body p {
+  font-size: 1.05rem;
+  line-height: 1.7;
+  margin-bottom: 14px;
+}
+
+.tribute-cta {
+  text-align: center;
+  margin-top: 50px;
+  padding-top: 30px;
+  border-top: 1px solid #ddd;
+}
+
+.tribute-button {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 12px 22px;
+  background: #2b2b2b;
+  color: #fff;
+  border-radius: 30px;
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+
+.tribute-button:hover {
+  background: #000;
 }
 
 .mm-tribute-share {
@@ -500,6 +629,11 @@ body {
 
   .mm-tribute-system {
     padding: 60px 16px 80px;
+  }
+
+  .tribute-body {
+    max-width: 92%;
+    padding: 18px;
   }
 
 }

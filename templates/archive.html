@@ -9,18 +9,36 @@
           </div>
         </div>
   
-        <p>A public archive honoring beloved companions and the memories they leave behind.</p>
+        <p>A public tribute library honoring beloved companions and the memories they leave behind.</p>
+        <div class="tribute-count">Honoring {{TRIBUTE_COUNT}} beloved companions and growing.</div>
   
         <div class="mm-hero-cta">
           <a href="/pet-tributes/submit/" class="mm-btn-primary">Create a Tribute</a>
         </div>
+        <p class="mm-hero-subtext">Share the story of a beloved companion and preserve their memory.</p>
       </section>
   
       <div class="tribute-grid">
         {{CARDS}}
       </div>
+
+      <section class="mm-explore-links">
+        <h3>Explore more tributes</h3>
+        <div class="mm-explore-links-row">
+          <a href="/pet-tributes/dog/">Dog Memorial Tributes</a>
+          <a href="/pet-tributes/">Pet Memorial Stories</a>
+          <a href="/pet-tributes/#recently-remembered-companions">Recent Pet Tributes</a>
+        </div>
+      </section>
   
       {{PAGINATION}}
+
+      <section class="mm-recently-remembered" id="recently-remembered-companions">
+        <h3>Recently Remembered Companions</h3>
+        <div class="tribute-grid">
+          {{RECENTLY_REMEMBERED_CARDS}}
+        </div>
+      </section>
   
       <section class="mm-bottom-cta">
         <h3>Would you like to honor your beloved companion?</h3>

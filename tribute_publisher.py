@@ -5,6 +5,7 @@ import re
 import shutil
 import json
 import html
+import random
 import urllib.parse
 import unicodedata
 import smtplib
@@ -426,6 +427,21 @@ def build_card_html(entry: dict) -> str:
         if (not image_filename or image_filename == "blank_memorial_loving_memory.png")
         else f"{card_href}{escape_html(image_filename)}"
     )
+    card_absolute_url = f"{SITE_DOMAIN}{card_href}"
+    card_image_absolute_url = (
+        f"{SITE_DOMAIN}{card_img_src}"
+        if card_img_src.startswith("/")
+        else card_img_src
+    )
+    pin_description = f"Remembering {pet_name}"
+    if subtitle_for_card:
+        pin_description += f" - {subtitle_for_card}"
+    pin_url = (
+        "https://pinterest.com/pin/create/button/"
+        f"?url={escape_url(card_absolute_url)}"
+        f"&media={escape_url(card_image_absolute_url)}"
+        f"&description={escape_url(pin_description)}"
+    )
     card_thumb_class = "mm-archive-thumb mm-placeholder" if is_placeholder_card else "mm-archive-thumb"
     card_more_html = (
         '<div class="mm-archive-more" aria-hidden="true">'
@@ -447,11 +463,14 @@ def build_card_html(entry: dict) -> str:
   data-state="{escape_html(state)}"
   data-email="{escape_html(email)}"
 >
-  <a class="mm-archive-link" href="{card_href}">
     <div class="{card_thumb_class}">
+      <a class="mm-archive-link mm-archive-thumb-link" href="{card_href}">
       <span class="mm-date-badge">{escape_html(publish_label)}</span>
       <img src="{card_img_src}" alt="{escape_html(pet_name)} memorial tribute" loading="lazy">
+      </a>
+      <a class="pin-button" href="{pin_url}" target="_blank" rel="noopener noreferrer" aria-label="Save {escape_html(pet_name)} tribute to Pinterest">Save</a>
     </div>
+  <a class="mm-archive-link" href="{card_href}">
     <div class="mm-archive-meta">
       {featured_badge_html}
       <h2 class="mm-archive-title">{title_line}</h2>
@@ -463,6 +482,25 @@ def build_card_html(entry: dict) -> str:
   </a>
 </article>
 """.strip()
+
+
+def build_recently_remembered_cards_html(all_entries: list[dict], current_page_entries: list[dict]) -> str:
+    if not all_entries:
+        return ""
+
+    page_slugs = {(e.get("slug") or "").strip() for e in current_page_entries}
+    candidates = [e for e in all_entries if (e.get("slug") or "").strip() and (e.get("slug") or "").strip() not in page_slugs]
+    if len(candidates) < 3:
+        candidates = [e for e in all_entries if (e.get("slug") or "").strip()]
+
+    if not candidates:
+        return ""
+
+    max_cards = min(6, len(candidates))
+    min_cards = min(3, len(candidates))
+    sample_size = max_cards if max_cards <= min_cards else random.randint(min_cards, max_cards)
+    selected_entries = random.sample(candidates, sample_size)
+    return "".join(build_card_html(entry) for entry in selected_entries)
 
 
 def page_url(page_num: int) -> str:
@@ -570,8 +608,11 @@ def build_archive_full_html(cards_html: str, current_page: int, total_pages: int
     # Inject cards + pagination into archive template
     pagination_html = build_pagination(current_page, total_pages)
 
+    recently_remembered_html = build_recently_remembered_cards_html(tribute_entries, tribute_entries)
     content = archive_template.replace("{{CARDS}}", cards_html)
     content = content.replace("{{PAGINATION}}", pagination_html)
+    content = content.replace("{{TRIBUTE_COUNT}}", str(len(tribute_entries)))
+    content = content.replace("{{RECENTLY_REMEMBERED_CARDS}}", recently_remembered_html)
 
     # Load header + footer
     header_template = load_template("header.html")
@@ -599,6 +640,7 @@ def build_archive_full_html(cards_html: str, current_page: int, total_pages: int
 
 def write_archive_page(
     page_entries: list[dict],
+    all_entries: list[dict],
     title: str,
     canonical: str,
     output_folder: str,
@@ -607,6 +649,8 @@ def write_archive_page(
     pagination_prefix: str,
 ):
     cards_html = "".join(build_card_html(e) for e in page_entries)
+    tribute_count = len(all_entries)
+    recently_remembered_html = build_recently_remembered_cards_html(all_entries, page_entries)
     pagination_html = build_pagination_for_prefix(current_page, total_pages, pagination_prefix)
     og_title = title
     og_description = "Browse pet memorial tributes honoring beloved companions."
@@ -634,6 +678,8 @@ def write_archive_page(
 
     content = archive_template.replace("{{CARDS}}", cards_html)
     content = content.replace("{{PAGINATION}}", pagination_html)
+    content = content.replace("{{TRIBUTE_COUNT}}", str(tribute_count))
+    content = content.replace("{{RECENTLY_REMEMBERED_CARDS}}", recently_remembered_html)
 
     header_template = load_template("header.html")
     header_html = header_template.replace("{{HEADER_CLASSES}}", "site-header")
@@ -692,6 +738,7 @@ def rebuild_archive_pages(entries):
 
         write_archive_page(
             page_entries=page_entries,
+            all_entries=entries,
             title=title,
             canonical=canonical,
             output_folder=output_folder,
@@ -744,6 +791,7 @@ def rebuild_pet_type_archives(entries):
 
             write_archive_page(
                 page_entries=page_entries,
+                all_entries=type_entries,
                 title=title,
                 canonical=canonical,
                 output_folder=output_folder,
@@ -838,16 +886,12 @@ def migrate_existing_folders_to_json():
 
         # Extract basic fields
         title_match = re.search(r'<h1 class="mm-tribute-name">(.*?)</h1>', html)
-        subtitle_match = re.search(r'<p class="mm-tribute-subtitle">(.*?)</p>', html)
         years_match = re.search(r'<p class="mm-years">(.*?)</p>', html)
         excerpt_match = re.search(r'<meta name="description" content="(.*?)"', html)
         origin_match = re.search(r'<p class="mm-tribute-origin">Shared by (.*?)</p>', html)
 
         pet_name = title_match.group(1).strip() if title_match else name
         breed = ""
-        if subtitle_match:
-            sub = subtitle_match.group(1)
-            breed = sub.replace(" Memorial Tribute", "").strip()
 
         years_pretty = years_match.group(1).strip() if years_match else ""
         excerpt = excerpt_match.group(1).strip() if excerpt_match else ""
@@ -911,13 +955,33 @@ def build_tribute_html(
     pet_type_title = pet_type_clean if pet_type_clean else "Pet"
     pet_type_lower = pet_type_title.lower()
 
-    if breed_clean:
-        subtitle = f"{breed_clean} {pet_type_title} Memorial Tribute"
+    if breed_clean and pet_type_clean:
+        tribute_h1 = f"{pet_name} – {breed_clean} {pet_type_clean} Memorial Tribute"
+    elif pet_type_clean:
+        tribute_h1 = f"{pet_name} – {pet_type_clean} Memorial Tribute"
     else:
-        subtitle = f"{pet_type_title} Memorial Tribute"
+        tribute_h1 = f"{pet_name} – Pet Memorial Tribute"
 
-    title = f"{pet_name} {pet_type_title} Memorial Tribute | Melton Memorials"
-    og_title = f"{pet_name} - {breed_clean + ' ' if breed_clean else ''}Pet Memorial Tribute".strip()
+    first_name_clean = (first_name or "").strip()
+    if breed_clean and first_name_clean:
+        tribute_intro = (
+            f"A loving tribute to {pet_name}, a cherished {breed_clean} remembered with love by {first_name_clean}."
+        )
+    elif breed_clean:
+        tribute_intro = (
+            f"A loving tribute to {pet_name}, a cherished {breed_clean} remembered with love by those who loved them."
+        )
+    elif first_name_clean:
+        tribute_intro = (
+            f"A loving tribute to {pet_name}, a beloved companion remembered with love by {first_name_clean}."
+        )
+    else:
+        tribute_intro = (
+            f"A loving tribute to {pet_name}, a beloved companion remembered with love by those who loved them."
+        )
+
+    title = f"{tribute_h1} | Melton Memorials"
+    og_title = tribute_h1
 
     years_pretty = normalize_dates_text(years_pretty)
     plain_message = re.sub(r"<[^>]+>", " ", tribute_message_html or "")
@@ -943,7 +1007,6 @@ def build_tribute_html(
     submitter_parts = [p for p in [first_name.strip(), state.strip()] if p]
     submitter_line = ", ".join(submitter_parts)
 
-    breed_line = subtitle
     input_filename = os.path.basename(relative_filename_from_url(og_image_abs))
 
     # Determine image file/path from provided URL filename. If empty, fall back to shared placeholder.
@@ -1060,8 +1123,9 @@ def build_tribute_html(
     # ----- Load tribute content template -----
     content = load_template("tribute_content.html")
 
+    content = content.replace("{{TRIBUTE_H1}}", escape_html(tribute_h1))
+    content = content.replace("{{TRIBUTE_INTRO}}", escape_html(tribute_intro))
     content = content.replace("{{PET_NAME}}", escape_html(pet_name))
-    content = content.replace("{{BREED_LINE}}", escape_html(breed_line))
     content = content.replace("{{IMAGE_PATH}}", image_path)
     content = content.replace("{{IMAGE_ALT}}", escape_html(image_alt))
     content = content.replace("{{IMAGE_2_BLOCK}}", image_2_block)

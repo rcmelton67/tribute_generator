@@ -134,5 +134,22 @@
     "image2_filename": "",
     "featured": false,
     "email_sent": true
+  },
+  {
+    "slug": "ryley-dog-english-springer-spaniel",
+    "pet_name": "Ryley",
+    "breed": "English Springer Spaniel",
+    "pet_type": "Dog",
+    "folder": "memorials",
+    "years_pretty": "2013 - 2025",
+    "excerpt": "She had a heart that loved everything and everyone. I have never been more loved than by this dog. 💔",
+    "first_name": "Hope",
+    "state": "CA",
+    "email": "sib.reinickendorf@dfv-berlin.de",
+    "published_iso": "2026-03-07T18:32:16",
+    "image_filename": "ryley-dog-english-springer-spaniel.webp",
+    "image2_filename": "ryley-dog-english-springer-spaniel-2.webp",
+    "featured": false,
+    "email_sent": true
   }
 ]
